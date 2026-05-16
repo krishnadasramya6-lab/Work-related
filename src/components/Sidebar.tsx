@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, CheckSquare, Layers, FolderOpen,
   CalendarDays, AlarmClock, ChevronLeft, ChevronRight,
-  Stethoscope, Target,
+  Stethoscope,
 } from 'lucide-react';
 import { View } from '../types';
 
@@ -25,7 +25,6 @@ const NAV: { view: View; label: string; icon: React.ElementType; section?: strin
   { view: 'projects', label: 'Projects', icon: FolderOpen },
   { view: 'meetings', label: 'Meetings', icon: CalendarDays },
   { view: 'followups', label: 'Follow-ups', icon: AlarmClock },
-  { view: 'okr', label: 'OKR / KRA System', icon: Target, section: 'Strategy' },
 ];
 
 export function Sidebar({ current, onNavigate, open, onToggle, counts }: Props) {
