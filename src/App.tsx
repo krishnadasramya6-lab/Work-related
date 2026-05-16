@@ -7,6 +7,7 @@ import { ProgramsView } from './components/ProgramsView';
 import { ProjectsView } from './components/ProjectsView';
 import { MeetingsView } from './components/MeetingsView';
 import { FollowUpsView } from './components/FollowUpsView';
+import { OKRDashboard } from './components/OKRDashboard';
 import { isOverdue, isDueToday } from './utils/helpers';
 
 export default function App() {
@@ -95,6 +96,7 @@ export default function App() {
             onDelete={store.deleteFollowUp}
           />
         )}
+        {view === 'okr' && <OKRDashboard />}
       </main>
     </div>
   );

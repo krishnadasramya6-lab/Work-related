@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, CheckSquare, Layers, FolderOpen,
   CalendarDays, AlarmClock, ChevronLeft, ChevronRight,
-  Stethoscope,
+  Stethoscope, Target,
 } from 'lucide-react';
 import { View } from '../types';
 
@@ -18,13 +18,14 @@ interface Props {
   };
 }
 
-const NAV: { view: View; label: string; icon: React.ElementType }[] = [
+const NAV: { view: View; label: string; icon: React.ElementType; section?: string }[] = [
   { view: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { view: 'tasks', label: 'Tasks', icon: CheckSquare },
   { view: 'programs', label: 'Programs', icon: Layers },
   { view: 'projects', label: 'Projects', icon: FolderOpen },
   { view: 'meetings', label: 'Meetings', icon: CalendarDays },
   { view: 'followups', label: 'Follow-ups', icon: AlarmClock },
+  { view: 'okr', label: 'OKR / KRA System', icon: Target, section: 'Strategy' },
 ];
 
 export function Sidebar({ current, onNavigate, open, onToggle, counts }: Props) {
@@ -48,36 +49,48 @@ export function Sidebar({ current, onNavigate, open, onToggle, counts }: Props) 
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 space-y-0.5 overflow-hidden">
-        {NAV.map(({ view, label, icon: Icon }) => {
+      <nav className="flex-1 py-3 space-y-0.5 overflow-hidden overflow-y-auto">
+        {NAV.map(({ view, label, icon: Icon, section }, idx) => {
           const badge =
             view === 'tasks' && counts.todayTasks > 0 ? counts.todayTasks :
             view === 'followups' && counts.openFollowUps > 0 ? counts.openFollowUps :
             view === 'meetings' && counts.upcomingMeetings > 0 ? counts.upcomingMeetings :
             0;
 
+          const prevSection = idx > 0 ? NAV[idx - 1].section : undefined;
+          const showDivider = section && section !== prevSection;
+
           return (
-            <button
-              key={view}
-              onClick={() => onNavigate(view)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg mx-1 transition-colors ${
-                current === view
-                  ? 'bg-brand-600 text-white'
-                  : 'text-brand-200 hover:bg-brand-800 hover:text-white'
-              } ${open ? 'w-[calc(100%-8px)]' : 'w-10 justify-center'}`}
-            >
-              <Icon size={18} className="flex-shrink-0" />
-              {open && (
-                <>
-                  <span className="flex-1 text-left truncate">{label}</span>
-                  {badge > 0 && (
-                    <span className="ml-auto bg-brand-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                      {badge > 9 ? '9+' : badge}
-                    </span>
-                  )}
-                </>
+            <div key={view}>
+              {showDivider && open && (
+                <div className="px-3 pt-3 pb-1">
+                  <p className="text-brand-400 text-xs font-semibold tracking-widest uppercase">{section}</p>
+                </div>
               )}
-            </button>
+              {showDivider && !open && <div className="border-t border-brand-800 mx-2 my-2" />}
+              <button
+                onClick={() => onNavigate(view)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg mx-1 transition-colors ${
+                  current === view
+                    ? view === 'okr'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-brand-600 text-white'
+                    : 'text-brand-200 hover:bg-brand-800 hover:text-white'
+                } ${open ? 'w-[calc(100%-8px)]' : 'w-10 justify-center'}`}
+              >
+                <Icon size={18} className="flex-shrink-0" />
+                {open && (
+                  <>
+                    <span className="flex-1 text-left truncate">{label}</span>
+                    {badge > 0 && (
+                      <span className="ml-auto bg-brand-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                        {badge > 9 ? '9+' : badge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            </div>
           );
         })}
       </nav>

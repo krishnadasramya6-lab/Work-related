@@ -74,4 +74,4 @@ export interface FollowUp {
   updatedAt: string;
 }
 
-export type View = 'dashboard' | 'tasks' | 'programs' | 'projects' | 'meetings' | 'followups';
+export type View = 'dashboard' | 'tasks' | 'programs' | 'projects' | 'meetings' | 'followups' | 'okr';
