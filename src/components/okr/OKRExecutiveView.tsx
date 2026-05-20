@@ -1,6 +1,8 @@
-import { Zap, CheckCircle, AlertTriangle, XCircle, Users, Calendar, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
+import { Zap, CheckCircle, AlertTriangle, XCircle, Users, Calendar, MessageSquare, FileText } from 'lucide-react';
 import { departments, strategicObjectives, objectiveColorMap } from '../../data/okrData';
 import { KRAUpdate } from '../../store/useOKRStore';
+import { OKRMeetingReport } from './OKRMeetingReport';
 
 interface Props {
   updates: Record<string, KRAUpdate>;
@@ -14,6 +16,7 @@ const STATUS_CFG = {
 };
 
 export function OKRExecutiveView({ updates }: Props) {
+  const [showReport, setShowReport] = useState(false);
   // Gather all KRAs with their live status
   const allKRAs = departments.flatMap(dept =>
     dept.kras.map(kra => {
@@ -34,16 +37,29 @@ export function OKRExecutiveView({ updates }: Props) {
 
   return (
     <div className="space-y-5">
+      {showReport && (
+        <OKRMeetingReport updates={updates} onClose={() => setShowReport(false)} />
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-900 to-red-900 rounded-2xl p-5 text-white">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
-            <Zap size={18} />
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
+              <Zap size={18} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Leadership Review</h2>
+              <p className="text-slate-300 text-xs">What needs your attention right now</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold">Leadership Review</h2>
-            <p className="text-slate-300 text-xs">What needs your attention right now</p>
-          </div>
+          <button
+            onClick={() => setShowReport(true)}
+            className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors border border-white/20"
+          >
+            <FileText size={13} />
+            Generate Meeting Report
+          </button>
         </div>
         {/* Scorecards */}
         <div className="grid grid-cols-4 gap-2 mt-2">

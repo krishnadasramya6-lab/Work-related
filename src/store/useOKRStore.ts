@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { RAGStatus } from '../data/okrData';
+import { kraBaseline } from '../data/kraBaseline';
 
 export interface KRAUpdate {
   kraId: string;
@@ -13,11 +14,16 @@ export interface KRAUpdate {
 const STORAGE_KEY = 'okr_kra_updates_v1';
 
 function loadUpdates(): Record<string, KRAUpdate> {
+  // Start from the GitHub baseline, then apply any in-session changes on top
+  const base = { ...kraBaseline };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const local = JSON.parse(raw);
+      return { ...base, ...local };
+    }
   } catch {}
-  return {};
+  return base;
 }
 
 function saveUpdates(updates: Record<string, KRAUpdate>) {
