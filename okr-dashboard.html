@@ -107,9 +107,18 @@
   .keyrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--slate)}
   .hidden{display:none}
   footer{padding:32px 24px;text-align:center;font-size:12px;color:var(--slate)}
+  /* upload button */
+  .upload{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#0f172a;border:none;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .upload:hover{background:#e2e8f0}
+  .src{font-size:11px;color:#94a3b8;margin-top:4px}
+  .src a{color:#7dd3fc;cursor:pointer;text-decoration:underline}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:50;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
+  .toast.show{opacity:1}
+  .toast.err{background:#b91c1c}
   @media (max-width:900px){.hmeta{display:none}}
-  @media print{.tabbar{position:static}.tab{display:none}.tab.active{display:inline}body{background:#fff}.card{box-shadow:none;break-inside:avoid}}
+  @media print{.tabbar{position:static}.tab{display:none}.tab.active{display:inline}body{background:#fff}.card{box-shadow:none;break-inside:avoid}.upload{display:none}}
 </style>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <header>
@@ -121,9 +130,17 @@
         <p id="h-lead"></p>
       </div>
     </div>
-    <div class="pill"><span class="dot" style="background:#34d399"></span><span class="mono" id="h-date"></span></div>
+    <div class="row" style="gap:12px">
+      <div style="text-align:right">
+        <div class="pill"><span class="dot" style="background:#34d399"></span><span class="mono" id="h-date"></span></div>
+        <p class="src" id="h-src"></p>
+      </div>
+      <button class="upload" id="uploadBtn" title="Upload your Master OKR Sheet (.xlsx) to regenerate the dashboard">⬆ Upload Master Sheet</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" />
+    </div>
   </div>
 </header>
+<div class="toast" id="toast"></div>
 
 <div class="tabbar">
   <div class="wrap">
@@ -145,10 +162,10 @@
 // ════════════════════ DATA (from Master OKR Sheet · Q1 FY27, as of 29 Jun 2026) ════════════════════
 const meta={org:'Irillic Pvt. Ltd.',lead:'Ramya Krishnadas',title:'OKR Program Dashboard',fy:'FY 2026-27',asOf:'29 Jun 2026',asOfShort:'Jun 28',quarter:'Q1',quarterRange:'Apr–Jun 2026',fyProgressPct:25,health:9};
 // Real department-KRA RAG flags from the sheet (160 KRAs; Green=100% done; sheet has no on-track tier)
-const rollup={completed:5,onTrack:0,atRisk:9,offTrack:31,pending:115,total:160};
-const headline={totalKRs:160,objectives:5,healthyKRs:5,needAttention:40,milestoneGaps:2};
+let rollup={completed:5,onTrack:0,atRisk:9,offTrack:31,pending:115,total:160};
+let headline={totalKRs:160,objectives:5,healthyKRs:5,needAttention:40,milestoneGaps:2};
 // q1 = simple average of all department KRAs tagged to this objective (each KRA = avg of its milestone tasks)
-const objectives=[
+let objectives=[
  {num:1,priority:1,short:'L.nm WL & NIR — India Base',title:'Establish a successful and strong base of L.nm — WL & NIR with competition in India',krCount:6,teams:['Sales','QA/RA','Product Mgmt+CAS','RND','MFG'],annual:15,q1:15,target:25,status:'at-risk',risk:'BIS approval, CAS training & WL+NIR production release — all at risk',delta:8},
  {num:2,priority:2,short:'.nm — Revenue Engine',title:'Establish Irillic .nm (Base & HD) as a market-reliable revenue engine — domestic & global',krCount:6,teams:['Sales','Product Mgmt+CAS','QA/RA','MFG'],annual:11,q1:11,target:25,status:'at-risk',risk:'Intl regulatory clearances behind Q2; distributor onboarding delayed in identified .nm markets',delta:7},
  {num:3,priority:3,short:'P&L Cost Efficiency',title:'Drive P&L cost efficiency and maximize gross margin — EBITDA positive',krCount:7,teams:['Finance','Purchase','MFG','HR'],annual:3,q1:3,target:25,status:'off-track',risk:'Finance & Purchase not submitted; no active milestone data',delta:2},
@@ -157,7 +174,7 @@ const objectives=[
 ];
 // q1 = simple average of the function's KRAs (each KRA = avg of its milestone tasks)
 // status: pending(0%/no data) · off-track(<10%) · at-risk(10–<20%) · on-track(≥20%)
-const functions=[
+let functions=[
  {code:'RND',name:'R&D',leads:'Machaiah / Shivangi',q1:13.6,status:'at-risk',mDone:6,mTot:53,sub:'submitted',pace:'on-pace'},
  {code:'PM+C',name:'Product Management + CAS',leads:'Ashwin R. / Reshma',q1:16.3,status:'at-risk',mDone:6,mTot:57,sub:'submitted',pace:'on-pace'},
  {code:'QA',name:'QA / RA',leads:'Hariom / Nanda / Ramya',q1:20.7,status:'on-track',mDone:12,mTot:95,sub:'submitted',pace:'on-pace'},
@@ -192,7 +209,7 @@ const decisions=[
  {priority:'high',type:'Mandate',raisedBy:'Ramya (QA/RA)',neededBy:'30-Jun-2026',text:'For this to work reliably, we need every function to report consistently and stay accountable for their numbers. Need leadership support to bring this in practice.'},
  {priority:'high',type:'Unblock',raisedBy:'Saish (RND)',neededBy:'03-Jul-2026',text:'ECR-RND-22 (L.nm WL) has skipped its milestone tasks (production engg, pilot production, KOL validation – final etc) due to the delay in part procurement. If this is not fixed ASAP, it may significantly affect the L.nm NIR release date.'},
 ];
-const blockers=[
+let blockers=[
  {fn:'R&D',obj:'OBJ1',task:'Camera head IP testing milestone',owner:'Shivangi (RND)',reason:'Awaiting parts from DigiKey to complete internal camera head test for IP — creating delay in WL ECR closure'},
  {fn:'R&D',obj:'OBJ1',task:'NIR ECR design milestone',owner:'Shivangi (RND)',reason:'Reason not provided'},
  {fn:'QA / RA',obj:'OBJ1',task:'HSW Arthroscope system Validation report',owner:'Hariom & Machaiah (QA/RA)',reason:'2 samples of 4mm 30° Arth handed over to engineering team on 2nd Feb 2026 and Qty-2 on 14 Apr 2026 — validation not yet completed'},
@@ -340,12 +357,114 @@ function trendView(){
 }
 
 // ════════════════════ RENDER ════════════════════
-$('view-executive').innerHTML=execView();
-$('view-functional').innerHTML=funcView();
-$('view-dependencies').innerHTML=depView();
-$('view-trends').innerHTML=trendView();
 function bindDepChips(){document.querySelectorAll('#depchips .chip').forEach(c=>c.onclick=()=>{depFilter=c.dataset.q;$('view-dependencies').innerHTML=depView();bindDepChips();});}
-bindDepChips();
+function renderAll(){
+  $('view-executive').innerHTML=execView();
+  $('view-functional').innerHTML=funcView();
+  $('view-dependencies').innerHTML=depView();
+  $('view-trends').innerHTML=trendView();
+  bindDepChips();
+  $('h-date').textContent=`${meta.asOf} · 09:00 AM`;
+  $('foot').textContent=`Irillic · ${meta.title} · ${meta.fy} · Data as of ${meta.asOf} · Sourced from Master OKR Sheet`;
+}
+
+// ════════════════════ UPLOAD & REGENERATE ════════════════════
+// Same rule as the audit: KRA progress = avg of its milestone tasks; function = avg of its KRAs.
+const FN_DEFS=[
+ {code:'RND',name:'R&D',leads:'Machaiah / Shivangi',token:'rnd'},
+ {code:'PM+C',name:'Product Management + CAS',leads:'Ashwin R. / Reshma',token:'product'},
+ {code:'QA',name:'QA / RA',leads:'Hariom / Nanda / Ramya',token:'qara'},
+ {code:'S&M',name:'Sales & Marketing',leads:'Arindam / Amit',token:'sales'},
+ {code:'MFG',name:'Manufacturing',leads:'Chandhan',token:'mfg'},
+ {code:'CS',name:'Customer Service',leads:'Laxmiputra',token:'cs '},
+ {code:'PUR',name:'Purchase',leads:'Harish',token:'purchase'},
+ {code:'HR',name:'Human Resources',leads:'Twinkle / Rahul / Nisha',token:'hr '},
+ {code:'FIN',name:'Finance',leads:'Finance Team',token:'finance'},
+];
+function toNum(v){if(v===null||v===undefined||v==='')return null;const n=typeof v==='number'?v:parseFloat(String(v).replace('%',''));return isNaN(n)?null:n;}
+function objNum(o){if(!o)return null;const m=String(o).match(/(\d)/);return m?+m[1]:null;}
+function fStatus(p){return p===0?'pending':p<10?'off-track':p<20?'at-risk':'on-track';}
+function subStatus(m){return m===0?'not-submitted':m<20?'partial':'submitted';}
+function extractSheet(rows){
+  let kras=[],cur=null,curObj=null,mdone=0,mtot=0,blk=[];
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r]||[];
+    const a=row[0],b=row[1],f=row[5],g=row[6],j=toNum(row[9]),k=row[10],reason=row[12],p=row[15];
+    if(typeof a==='string'&&a.trim().toLowerCase().startsWith('obj'))curObj=a.trim();
+    const isKRA=b&&typeof b==='string'&&b.trim().toUpperCase().startsWith('KRA')&&b.trim()!=='KRA Description';
+    if(isKRA){cur={obj:curObj,tasks:[],rag:p};kras.push(cur);}
+    if(cur&&f&&typeof f==='string'&&f.trim()!==''&&f.trim()!=='Milestone Task'&&k!=null&&String(k).trim()!==''){
+      mtot++;const st=String(k).trim().toLowerCase();
+      if(st==='done'||st==='completed')mdone++;
+      if(j!=null)cur.tasks.push(j);
+      if(st==='blocked')blk.push({task:f.trim(),owner:g,reason:reason,obj:curObj});
+    }
+  }
+  kras.forEach(x=>x.prog=x.tasks.length?x.tasks.reduce((s,t)=>s+t,0)/x.tasks.length:0);
+  const fprog=kras.length?kras.reduce((s,x)=>s+x.prog,0)/kras.length:0;
+  return {fprog,kras,mdone,mtot,blk};
+}
+function regenerate(wb){
+  const norm=n=>n.toLowerCase();
+  const newFns=[],objAgg={},roll={completed:0,onTrack:0,atRisk:0,offTrack:0,pending:0},allBlk=[];
+  let totalKRA=0,matched=0;
+  FN_DEFS.forEach(def=>{
+    const sn=wb.SheetNames.find(n=>norm(n).includes(def.token));
+    if(!sn)return;matched++;
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
+    const ex=extractSheet(rows);
+    newFns.push({code:def.code,name:def.name,leads:def.leads,q1:Math.round(ex.fprog*10)/10,status:fStatus(ex.fprog),mDone:ex.mdone,mTot:ex.mtot,sub:subStatus(ex.mtot),pace:ex.fprog>=10?'on-pace':'behind'});
+    ex.kras.forEach(kr=>{
+      totalKRA++;const rg=String(kr.rag||'').toLowerCase();
+      if(rg.indexOf('green')>=0)roll.completed++;else if(rg.indexOf('amber')>=0)roll.atRisk++;else if(rg.indexOf('red')>=0)roll.offTrack++;else roll.pending++;
+      const on=objNum(kr.obj);if(on){(objAgg[on]=objAgg[on]||[]).push(kr.prog);}
+    });
+    ex.blk.forEach(b=>{const on=objNum(b.obj);allBlk.push({fn:def.name,obj:on?'OBJ'+on:'—',task:b.task,owner:b.owner?String(b.owner):def.leads,reason:b.reason?String(b.reason):'Reason not provided'});});
+  });
+  if(!matched)throw new Error('no department sheets recognised — is this the Master OKR Sheet?');
+  roll.total=totalKRA;
+  const newObjs=objectives.map(o=>{const arr=objAgg[o.num]||[];const q=arr.length?Math.round(arr.reduce((s,x)=>s+x,0)/arr.length):0;return Object.assign({},o,{q1:q,annual:q,status:fStatus(q)});});
+  const health=newFns.length?Math.round(newFns.reduce((s,f)=>s+f.q1,0)/newFns.length):0;
+  const gaps=newFns.filter(f=>f.q1===0).length;
+  functions=newFns;objectives=newObjs;rollup=roll;
+  headline={totalKRs:totalKRA,objectives:5,healthyKRs:roll.completed,needAttention:roll.atRisk+roll.offTrack,milestoneGaps:gaps};
+  meta.health=health;
+  if(allBlk.length)blockers=allBlk;
+}
+function snapshot(){return JSON.parse(JSON.stringify({functions,objectives,rollup,headline,blockers,health:meta.health,asOf:meta.asOf}));}
+function applyData(d){functions=d.functions;objectives=d.objectives;rollup=d.rollup;headline=d.headline;blockers=d.blockers;meta.health=d.health;meta.asOf=d.asOf;}
+const BASELINE=snapshot();
+const LS_KEY='okr_uploaded_v2';
+function setSource(t,reset){$('h-src').innerHTML=esc(t)+(reset?'  ·  <a id="resetLink">reset to baseline</a>':'');const rl=$('resetLink');if(rl)rl.onclick=resetBaseline;}
+function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast show'+(err?' err':'');setTimeout(()=>{t.className='toast'+(err?' err':'');},3800);}
+function handleFile(file){
+  if(typeof XLSX==='undefined'){toast('Excel reader not loaded — open online once, then it caches.',true);return;}
+  const reader=new FileReader();
+  reader.onload=e=>{try{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    regenerate(wb);
+    meta.asOf=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    const snap=snapshot();snap.fileName=file.name;
+    try{localStorage.setItem(LS_KEY,JSON.stringify(snap));}catch(_){}
+    renderAll();setSource('Data: '+file.name+' · regenerated '+meta.asOf,true);
+    toast('✓ Dashboard regenerated from '+file.name);
+  }catch(err){toast('Could not read sheet: '+err.message,true);}};
+  reader.onerror=()=>toast('File read failed',true);
+  reader.readAsArrayBuffer(file);
+}
+function resetBaseline(){applyData(JSON.parse(JSON.stringify(BASELINE)));meta.asOf=BASELINE.asOf;try{localStorage.removeItem(LS_KEY);}catch(_){}renderAll();setSource('Data: baseline (Master Sheet · '+BASELINE.asOf+')',false);toast('Reset to baseline');}
+
+// wire upload
+$('uploadBtn').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=e=>{if(e.target.files&&e.target.files[0])handleFile(e.target.files[0]);e.target.value='';};
+
+// restore last upload if present
+(function(){
+  let restored=false;
+  try{const raw=localStorage.getItem(LS_KEY);if(raw){const d=JSON.parse(raw);applyData(d);setSource('Data: '+(d.fileName||'uploaded sheet')+' · '+meta.asOf,true);restored=true;}}catch(_){}
+  if(!restored)setSource('Data: baseline (Master Sheet · '+BASELINE.asOf+')',false);
+  renderAll();
+})();
 </script>
 </body>
 </html>
