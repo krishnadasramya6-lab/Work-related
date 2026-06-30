@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, createContext, useContext } from 'react';
+import * as XLSX from 'xlsx';
 import {
-  programMeta, statusRollup, headlineStats, objectives, functions,
-  deadlines, dependencies, decisions, blockers, risks,
+  programMeta, deadlines, dependencies, decisions, risks,
   RAG_CFG, DEP_CFG, SEV_CFG, type RAG,
 } from '../data/dashboardData';
+import { DashboardData, baselineData, regenerateFromWorkbook } from '../data/regenerate';
 
 type Tab = 'executive' | 'functional' | 'dependencies' | 'trends';
 
@@ -14,29 +15,70 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'trends',       label: 'Trends & Actions' },
 ];
 
+const LS_KEY = 'okr_uploaded_v2';
+const DataContext = createContext<DashboardData>(baselineData());
+const useData = () => useContext(DataContext);
+
 export function OKRProgramDashboard() {
   const [tab, setTab] = useState<Tab>('executive');
+  const [data, setData] = useState<DashboardData>(() => {
+    try { const raw = localStorage.getItem(LS_KEY); if (raw) return JSON.parse(raw); } catch {}
+    return baselineData();
+  });
+  const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const flash = (msg: string, err?: boolean) => { setToast({ msg, err }); setTimeout(() => setToast(null), 3800); };
+
+  const onFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target!.result as ArrayBuffer), { type: 'array' });
+        const d = regenerateFromWorkbook(wb, file.name);
+        setData(d);
+        try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch {}
+        flash('✓ Dashboard regenerated from ' + file.name);
+      } catch (err: any) { flash('Could not read sheet: ' + err.message, true); }
+    };
+    reader.onerror = () => flash('File read failed', true);
+    reader.readAsArrayBuffer(file);
+  };
+  const onReset = () => {
+    setData(baselineData());
+    try { localStorage.removeItem(LS_KEY); } catch {}
+    flash('Reset to baseline');
+  };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800">
-      <Header />
-      <TabBar tab={tab} setTab={setTab} />
-      <main className="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {tab === 'executive'    && <ExecutiveOverview />}
-        {tab === 'functional'   && <FunctionalOverview />}
-        {tab === 'dependencies' && <Dependencies />}
-        {tab === 'trends'       && <TrendsActions />}
-      </main>
-      <footer className="max-w-[1500px] mx-auto px-6 py-8 text-center text-xs text-slate-400">
-        Irillic · {programMeta.title} · {programMeta.fy} · Data as of {programMeta.asOf} ·
-        Sourced from Master OKR Sheet
-      </footer>
-    </div>
+    <DataContext.Provider value={data}>
+      <div className="min-h-screen bg-slate-100 text-slate-800">
+        <Header data={data} onUploadClick={() => fileRef.current?.click()} onReset={onReset} />
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.currentTarget.value = ''; }} />
+        <TabBar tab={tab} setTab={setTab} />
+        <main className="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+          {tab === 'executive'    && <ExecutiveOverview />}
+          {tab === 'functional'   && <FunctionalOverview />}
+          {tab === 'dependencies' && <Dependencies />}
+          {tab === 'trends'       && <TrendsActions />}
+        </main>
+        <footer className="max-w-[1500px] mx-auto px-6 py-8 text-center text-xs text-slate-400">
+          Irillic · {programMeta.title} · {programMeta.fy} · Data as of {data.asOf} ·
+          Sourced from Master OKR Sheet
+        </footer>
+        {toast && (
+          <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-sm text-white shadow-xl max-w-[90vw] ${toast.err ? 'bg-red-700' : 'bg-slate-900'}`}>
+            {toast.msg}
+          </div>
+        )}
+      </div>
+    </DataContext.Provider>
   );
 }
 
 // ════════════════════════ HEADER ════════════════════════
-function Header() {
+function Header({ data, onUploadClick, onReset }: { data: DashboardData; onUploadClick: () => void; onReset: () => void }) {
   return (
     <header className="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 text-white">
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between flex-wrap gap-3">
@@ -52,10 +94,21 @@ function Header() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white/5 border border-white/15 rounded-full px-4 py-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="text-xs font-mono text-slate-200">{programMeta.asOf} · 09:00 AM</span>
+          <div className="text-right">
+            <div className="flex items-center gap-2 bg-white/5 border border-white/15 rounded-full px-4 py-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs font-mono text-slate-200">{data.asOf} · 09:00 AM</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Data: {data.source}
+              {!data.isBaseline && <>{'  ·  '}<button onClick={onReset} className="underline text-sky-300 hover:text-sky-200">reset to baseline</button></>}
+            </p>
           </div>
+          <button onClick={onUploadClick}
+            className="flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-200 font-bold text-sm rounded-full px-4 py-2.5"
+            title="Upload your Master OKR Sheet (.xlsx) to regenerate the dashboard">
+            ⬆ Upload Master Sheet
+          </button>
         </div>
       </div>
     </header>
@@ -105,6 +158,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 // ════════════════════════ EXECUTIVE OVERVIEW ════════════════════════
 function ExecutiveOverview() {
+  const { objectives, functions, headlineStats } = useData();
   return (
     <>
       {/* Top row: health gauge + 4 stat cards */}
@@ -243,7 +297,8 @@ function ExecutiveOverview() {
 }
 
 function HealthGauge() {
-  const score = programMeta.healthScore;
+  const { statusRollup, health } = useData();
+  const score = health;
   const r = 42, circ = 2 * Math.PI * r, off = circ * (1 - score / 100);
   return (
     <Card className="p-5 flex flex-col items-center justify-center lg:row-span-1">
@@ -291,6 +346,7 @@ function StatCard({ value, label, sub, accent, valueClass = 'text-slate-800', ti
 
 // ════════════════════════ FUNCTIONAL OVERVIEW (timeline) ════════════════════════
 function FunctionalOverview() {
+  const { functions } = useData();
   const quarters = ['Q1 APR–JUN', 'Q2 JUL–SEP', 'Q3 OCT–DEC', 'Q4 JAN–MAR'];
   const paceCfg = {
     ahead:    { label: 'Ahead',   color: 'text-emerald-600', bar: 'bg-emerald-400' },
@@ -427,6 +483,7 @@ function Dependencies() {
 
 // ════════════════════════ TRENDS & ACTIONS ════════════════════════
 function TrendsActions() {
+  const { objectives, blockers } = useData();
   return (
     <>
       {/* Leadership decisions */}
