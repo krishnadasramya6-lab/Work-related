@@ -110,10 +110,10 @@ function ExecutiveOverview() {
       {/* Top row: health gauge + 4 stat cards */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <HealthGauge />
-        <StatCard value={headlineStats.totalKRs} label="Total KRs" sub={`across ${headlineStats.objectives} objectives`} accent="border-t-blue-500" />
-        <StatCard value={headlineStats.healthyKRs} label="Healthy KRs" sub="completed or on track" accent="border-t-emerald-500" valueClass="text-emerald-600" tint="bg-emerald-50/40" />
-        <StatCard value={headlineStats.needAttention} label="Need Attention" sub="at risk or off track" accent="border-t-red-500" valueClass="text-red-600" tint="bg-red-50/40" />
-        <StatCard value={headlineStats.milestoneGaps} label="Milestone Gaps" sub="functions not submitted" accent="border-t-amber-500" valueClass="text-amber-600" tint="bg-amber-50/40" />
+        <StatCard value={headlineStats.totalKRs} label="Department KRAs" sub={`across 9 functions · ${headlineStats.objectives} objectives`} accent="border-t-blue-500" />
+        <StatCard value={headlineStats.healthyKRs} label="Completed KRAs" sub="green / 100% done" accent="border-t-emerald-500" valueClass="text-emerald-600" tint="bg-emerald-50/40" />
+        <StatCard value={headlineStats.needAttention} label="Need Attention" sub="amber + red KRAs" accent="border-t-red-500" valueClass="text-red-600" tint="bg-red-50/40" />
+        <StatCard value={headlineStats.milestoneGaps} label="Milestone Gaps" sub="functions with no progress" accent="border-t-amber-500" valueClass="text-amber-600" tint="bg-amber-50/40" />
       </div>
 
       {/* Q1 progress by objective */}
@@ -247,7 +247,7 @@ function HealthGauge() {
   const r = 42, circ = 2 * Math.PI * r, off = circ * (1 - score / 100);
   return (
     <Card className="p-5 flex flex-col items-center justify-center lg:row-span-1">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 text-center">Program Health Score</p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 text-center">Avg Program Progress</p>
       <div className="relative w-28 h-28">
         <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r={r} fill="none" stroke="#e2e8f0" strokeWidth="7" />
@@ -255,8 +255,8 @@ function HealthGauge() {
             strokeDasharray={circ} strokeDashoffset={off} />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-black text-slate-800">{score}</span>
-          <span className="text-[9px] text-slate-400">out of 100</span>
+          <span className="text-3xl font-black text-slate-800">{score}%</span>
+          <span className="text-[9px] text-slate-400">avg of 9 fns</span>
         </div>
       </div>
       <div className="w-full mt-3 space-y-1">

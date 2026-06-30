@@ -143,26 +143,30 @@
 
 <script>
 // ════════════════════ DATA (from Master OKR Sheet · Q1 FY27, as of 29 Jun 2026) ════════════════════
-const meta={org:'Irillic Pvt. Ltd.',lead:'Ramya Krishnadas',title:'OKR Program Dashboard',fy:'FY 2026-27',asOf:'29 Jun 2026',asOfShort:'Jun 28',quarter:'Q1',quarterRange:'Apr–Jun 2026',fyProgressPct:25,health:10};
-const rollup={completed:0,onTrack:2,atRisk:6,offTrack:8,pending:17,total:33};
-const headline={totalKRs:33,objectives:5,healthyKRs:2,needAttention:14,milestoneGaps:4};
+const meta={org:'Irillic Pvt. Ltd.',lead:'Ramya Krishnadas',title:'OKR Program Dashboard',fy:'FY 2026-27',asOf:'29 Jun 2026',asOfShort:'Jun 28',quarter:'Q1',quarterRange:'Apr–Jun 2026',fyProgressPct:25,health:9};
+// Real department-KRA RAG flags from the sheet (160 KRAs; Green=100% done; sheet has no on-track tier)
+const rollup={completed:5,onTrack:0,atRisk:9,offTrack:31,pending:115,total:160};
+const headline={totalKRs:160,objectives:5,healthyKRs:5,needAttention:40,milestoneGaps:2};
+// q1 = simple average of all department KRAs tagged to this objective (each KRA = avg of its milestone tasks)
 const objectives=[
- {num:1,priority:1,short:'L.nm WL & NIR — India Base',title:'Establish a successful and strong base of L.nm — WL & NIR with competition in India',krCount:6,teams:['Sales','QA/RA','Product Mgmt+CAS','RND','MFG'],annual:15,q1:15,target:25,status:'off-track',risk:'BIS approval, CAS training & WL+NIR production release — all at risk',delta:8},
- {num:2,priority:2,short:'.nm — Revenue Engine',title:'Establish Irillic .nm (Base & HD) as a market-reliable revenue engine — domestic & global',krCount:6,teams:['Sales','Product Mgmt+CAS','QA/RA','MFG'],annual:12,q1:12,target:25,status:'off-track',risk:'Intl regulatory clearances behind Q2; distributor onboarding delayed in identified .nm markets',delta:7},
+ {num:1,priority:1,short:'L.nm WL & NIR — India Base',title:'Establish a successful and strong base of L.nm — WL & NIR with competition in India',krCount:6,teams:['Sales','QA/RA','Product Mgmt+CAS','RND','MFG'],annual:15,q1:15,target:25,status:'at-risk',risk:'BIS approval, CAS training & WL+NIR production release — all at risk',delta:8},
+ {num:2,priority:2,short:'.nm — Revenue Engine',title:'Establish Irillic .nm (Base & HD) as a market-reliable revenue engine — domestic & global',krCount:6,teams:['Sales','Product Mgmt+CAS','QA/RA','MFG'],annual:11,q1:11,target:25,status:'at-risk',risk:'Intl regulatory clearances behind Q2; distributor onboarding delayed in identified .nm markets',delta:7},
  {num:3,priority:3,short:'P&L Cost Efficiency',title:'Drive P&L cost efficiency and maximize gross margin — EBITDA positive',krCount:7,teams:['Finance','Purchase','MFG','HR'],annual:3,q1:3,target:25,status:'off-track',risk:'Finance & Purchase not submitted; no active milestone data',delta:2},
- {num:4,priority:4,short:'NPD Portfolio Milestones',title:'Strengthen product portfolio — X.nm, V2 .nm, V2 L.nm milestone delivery',krCount:7,teams:['RND','Product Mgmt+CAS','QA/RA','MFG'],annual:3,q1:3,target:25,status:'pending',risk:'NPD milestones start Q2+; foundation being laid',delta:2},
- {num:5,priority:5,short:'New Business — 3Y Horizon',title:'Develop new business streams & identify inorganic opportunities (3-year horizon)',krCount:7,teams:['RND','QA/RA','Finance','Leadership'],annual:7,q1:7,target:25,status:'pending',risk:'Long-horizon; foundation work begins Q2–Q3',delta:4},
+ {num:4,priority:4,short:'NPD Portfolio Milestones',title:'Strengthen product portfolio — X.nm, V2 .nm, V2 L.nm milestone delivery',krCount:7,teams:['RND','Product Mgmt+CAS','QA/RA','MFG'],annual:0,q1:0,target:25,status:'pending',risk:'NPD milestones start Q2+; all 22 contributing KRAs still at 0%',delta:2},
+ {num:5,priority:5,short:'New Business — 3Y Horizon',title:'Develop new business streams & identify inorganic opportunities (3-year horizon)',krCount:7,teams:['RND','QA/RA','Finance','Leadership'],annual:7,q1:7,target:25,status:'off-track',risk:'Long-horizon; foundation work begins Q2–Q3',delta:4},
 ];
+// q1 = simple average of the function's KRAs (each KRA = avg of its milestone tasks)
+// status: pending(0%/no data) · off-track(<10%) · at-risk(10–<20%) · on-track(≥20%)
 const functions=[
- {code:'RND',name:'R&D',leads:'Machaiah / Shivangi',q1:43,status:'at-risk',mDone:3,mTot:7,sub:'submitted',pace:'ahead'},
- {code:'PM+C',name:'Product Management + CAS',leads:'Ashwin R. / Reshma',q1:22,status:'at-risk',mDone:0,mTot:0,sub:'not-submitted',pace:'on-pace'},
- {code:'QA',name:'QA / RA',leads:'Hariom / Nanda / Ramya',q1:23,status:'off-track',mDone:3,mTot:25,sub:'submitted',pace:'on-pace'},
- {code:'S&M',name:'Sales & Marketing',leads:'Arindam / Amit',q1:25,status:'at-risk',mDone:0,mTot:0,sub:'not-submitted',pace:'on-pace'},
- {code:'MFG',name:'Manufacturing',leads:'Chandhan',q1:2,status:'off-track',mDone:0,mTot:14,sub:'submitted',pace:'behind'},
- {code:'CS',name:'Customer Service',leads:'Laxmiputra',q1:9,status:'off-track',mDone:0,mTot:17,sub:'submitted',pace:'behind'},
+ {code:'RND',name:'R&D',leads:'Machaiah / Shivangi',q1:13.6,status:'at-risk',mDone:6,mTot:53,sub:'submitted',pace:'on-pace'},
+ {code:'PM+C',name:'Product Management + CAS',leads:'Ashwin R. / Reshma',q1:16.3,status:'at-risk',mDone:6,mTot:57,sub:'submitted',pace:'on-pace'},
+ {code:'QA',name:'QA / RA',leads:'Hariom / Nanda / Ramya',q1:20.7,status:'on-track',mDone:12,mTot:95,sub:'submitted',pace:'on-pace'},
+ {code:'S&M',name:'Sales & Marketing',leads:'Arindam / Amit',q1:1.1,status:'off-track',mDone:0,mTot:4,sub:'partial',pace:'behind'},
+ {code:'MFG',name:'Manufacturing',leads:'Chandhan',q1:1.1,status:'off-track',mDone:0,mTot:8,sub:'partial',pace:'behind'},
+ {code:'CS',name:'Customer Service',leads:'Laxmiputra',q1:5.0,status:'off-track',mDone:2,mTot:53,sub:'submitted',pace:'behind'},
  {code:'PUR',name:'Purchase',leads:'Harish',q1:0,status:'pending',mDone:0,mTot:0,sub:'not-submitted',pace:'behind'},
- {code:'HR',name:'Human Resources',leads:'Twinkle / Rahul / Nisha',q1:40,status:'off-track',mDone:0,mTot:9,sub:'submitted',pace:'ahead'},
- {code:'FIN',name:'Finance',leads:'Finance Team',q1:0,status:'pending',mDone:0,mTot:0,sub:'not-submitted',pace:'behind'},
+ {code:'HR',name:'Human Resources',leads:'Twinkle / Rahul / Nisha',q1:21.1,status:'on-track',mDone:0,mTot:4,sub:'partial',pace:'on-pace'},
+ {code:'FIN',name:'Finance',leads:'Finance Team',q1:0,status:'pending',mDone:0,mTot:6,sub:'partial',pace:'behind'},
 ];
 const deadlines=[
  {task:'OQC yield Q1 close — 100% target',owner:'Nanda (QA/RA)',due:'Jun 30, 2026',p:'P1',left:'1d left'},
@@ -240,17 +244,17 @@ function execView(){
   const circ=2*Math.PI*42, off=circ*(1-meta.health/100);
   const leg=[['Completed',rollup.completed,'#10b981'],['On Track',rollup.onTrack,'#3b82f6'],['At Risk',rollup.atRisk,'#f59e0b'],['Off Track',rollup.offTrack,'#ef4444'],['Pending',rollup.pending,'#cbd5e1']];
   const gauge=`<div class="card" style="display:flex;flex-direction:column;justify-content:center">
-    <p class="ttl" style="text-align:center;margin-bottom:8px">Program Health Score</p>
+    <p class="ttl" style="text-align:center;margin-bottom:8px">Avg Program Progress</p>
     <div class="gauge"><svg width="112" height="112" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
       <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" stroke-width="7"/>
       <circle cx="50" cy="50" r="42" fill="none" stroke="#dc2626" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${off}"/>
-    </svg><div class="val"><b>${meta.health}</b><s>out of 100</s></div></div>
+    </svg><div class="val"><b>${meta.health}%</b><s>avg of 9 fns</s></div></div>
     <div style="margin-top:12px">${leg.map(l=>`<div class="legrow"><span><span class="dot" style="background:${l[2]}"></span>${l[0]}</span><b>${l[1]}</b></div>`).join('')}</div></div>`;
   const stat=(num,lbl,s,brd,ntx,tint)=>`<div class="card stat" style="border-top-color:${brd};${tint?'background:'+tint:''}"><p class="num" style="${ntx?'color:'+ntx:''}">${num}</p><p class="lbl">${lbl}</p><p class="s">${s}</p></div>`;
-  const stats=stat(headline.totalKRs,'Total KRs',`across ${headline.objectives} objectives`,'#3b82f6')
-    +stat(headline.healthyKRs,'Healthy KRs','completed or on track','#10b981','#047857','#ecfdf522')
-    +stat(headline.needAttention,'Need Attention','at risk or off track','#ef4444','#b91c1c','#fef2f222')
-    +stat(headline.milestoneGaps,'Milestone Gaps','functions not submitted','#f59e0b','#b45309','#fffbeb22');
+  const stats=stat(headline.totalKRs,'Department KRAs',`across 9 functions · ${headline.objectives} objectives`,'#3b82f6')
+    +stat(headline.healthyKRs,'Completed KRAs','green / 100% done','#10b981','#047857','#ecfdf522')
+    +stat(headline.needAttention,'Need Attention','amber + red KRAs','#ef4444','#b91c1c','#fef2f222')
+    +stat(headline.milestoneGaps,'Milestone Gaps','functions with no progress','#f59e0b','#b45309','#fffbeb22');
   const q1bars=objectives.map(o=>`<div class="row" style="gap:12px"><span class="mono" style="width:48px;font-weight:800;color:var(--slate-tx);font-size:12px">OBJ${o.num}</span>
     <div class="track"><div class="fill ${RAG[o.status].f}" style="width:${o.q1}%"></div></div>
     <span class="${RAG[o.status].tx}" style="width:48px;text-align:right;font-weight:800;font-size:13px">${o.q1}%</span>

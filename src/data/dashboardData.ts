@@ -20,25 +20,29 @@ export const programMeta = {
   quarter: 'Q1',
   quarterRange: 'Apr–Jun 2026',
   fyProgressPct: 25, // 25% of FY elapsed at end of Q1
-  healthScore: 10,   // out of 100
+  // Avg program progress = simple average of the 9 function progresses.
+  // Each function = avg of its KRAs; each KRA = avg of its milestone tasks.
+  healthScore: 9,   // out of 100 — computed, not estimated
 };
 
-// ─── Status roll-up across all 33 KRs ───────────────────────────
+// ─── Status roll-up — REAL department-KRA RAG flags from the sheet ──
+// 160 departmental KRAs across 9 functions. Green = 100% complete.
+// (Sheet's RAG column has no separate "On Track" tier, so onTrack = 0.)
 export const statusRollup = {
-  completed: 0,
-  onTrack: 2,
-  atRisk: 6,
-  offTrack: 8,
-  pending: 17,
-  total: 33,
+  completed: 5,   // Green (100% done)
+  onTrack: 0,     // sheet RAG has no on-track tier
+  atRisk: 9,      // Amber
+  offTrack: 31,   // Red
+  pending: 115,   // Pending (incl. blank RAG)
+  total: 160,
 };
 
 export const headlineStats = {
-  totalKRs: 33,
+  totalKRs: 160,        // department-level KRAs actually tracked
   objectives: 5,
-  healthyKRs: 2,        // completed or on track
-  needAttention: 14,    // at risk or off track
-  milestoneGaps: 4,     // functions not submitted
+  healthyKRs: 5,        // Green / completed KRAs
+  needAttention: 40,    // Amber + Red KRAs
+  milestoneGaps: 2,     // functions with no milestone progress (Purchase, Finance)
 };
 
 // ─── 5 Strategic Objectives ─────────────────────────────────────
@@ -67,7 +71,7 @@ export const objectives: Objective[] = [
     krCount: 6,
     teams: ['Sales', 'QA/RA', 'Product Mgmt+CAS', 'RND', 'MFG'],
     annualPct: 15, q1Pct: 15, q1Target: 25,
-    status: 'off-track',
+    status: 'at-risk',
     riskContext: 'BIS approval, CAS training & WL+NIR production release — all at risk',
     trendDeltaVsMay: 8,
     color: 'red',
@@ -78,8 +82,8 @@ export const objectives: Objective[] = [
     title: 'Establish Irillic .nm (Base & HD) as a market-reliable revenue engine — domestic & global',
     krCount: 6,
     teams: ['Sales', 'Product Mgmt+CAS', 'QA/RA', 'MFG'],
-    annualPct: 12, q1Pct: 12, q1Target: 25,
-    status: 'off-track',
+    annualPct: 11, q1Pct: 11, q1Target: 25,
+    status: 'at-risk',
     riskContext: 'Intl regulatory clearances behind Q2; distributor onboarding delayed in identified .nm markets',
     trendDeltaVsMay: 7,
     color: 'red',
@@ -102,9 +106,9 @@ export const objectives: Objective[] = [
     title: 'Strengthen product portfolio — X.nm, V2 .nm, V2 L.nm milestone delivery',
     krCount: 7,
     teams: ['RND', 'Product Mgmt+CAS', 'QA/RA', 'MFG'],
-    annualPct: 3, q1Pct: 3, q1Target: 25,
+    annualPct: 0, q1Pct: 0, q1Target: 25,
     status: 'pending',
-    riskContext: 'NPD milestones start Q2+; foundation being laid',
+    riskContext: 'NPD milestones start Q2+; all 22 contributing KRAs still at 0%',
     trendDeltaVsMay: 2,
     color: 'slate',
   },
@@ -115,7 +119,7 @@ export const objectives: Objective[] = [
     krCount: 7,
     teams: ['RND', 'QA/RA', 'Finance', 'Leadership'],
     annualPct: 7, q1Pct: 7, q1Target: 25,
-    status: 'pending',
+    status: 'off-track',
     riskContext: 'Long-horizon; foundation work begins Q2–Q3',
     trendDeltaVsMay: 4,
     color: 'slate',
@@ -136,16 +140,18 @@ export interface FunctionHealth {
   pace: 'ahead' | 'on-pace' | 'behind';
 }
 
+// q1Pct = simple average of the function's KRAs (each KRA = avg of its milestone tasks).
+// Status: pending (0% / no data) · off-track (<10%) · at-risk (10–<20%) · on-track (≥20%).
 export const functions: FunctionHealth[] = [
-  { id: 'rnd',  code: 'RND', name: 'R&D',                   leads: 'Machaiah / Shivangi',     q1Pct: 43, status: 'at-risk',   milestonesDone: 3, milestonesTotal: 7,  submission: 'submitted',     pace: 'ahead'   },
-  { id: 'pm',   code: 'PM+C', name: 'Product Management + CAS', leads: 'Ashwin R. / Reshma',  q1Pct: 22, status: 'at-risk',   milestonesDone: 0, milestonesTotal: 0,  submission: 'not-submitted', pace: 'on-pace' },
-  { id: 'qara', code: 'QA',  name: 'QA / RA',               leads: 'Hariom / Nanda / Ramya',  q1Pct: 23, status: 'off-track', milestonesDone: 3, milestonesTotal: 25, submission: 'submitted',     pace: 'on-pace' },
-  { id: 'sales',code: 'S&M', name: 'Sales & Marketing',     leads: 'Arindam / Amit',          q1Pct: 25, status: 'at-risk',   milestonesDone: 0, milestonesTotal: 0,  submission: 'not-submitted', pace: 'on-pace' },
-  { id: 'mfg',  code: 'MFG', name: 'Manufacturing',         leads: 'Chandhan',                q1Pct: 2,  status: 'off-track', milestonesDone: 0, milestonesTotal: 14, submission: 'submitted',     pace: 'behind'  },
-  { id: 'cs',   code: 'CS',  name: 'Customer Service',      leads: 'Laxmiputra',              q1Pct: 9,  status: 'off-track', milestonesDone: 0, milestonesTotal: 17, submission: 'submitted',     pace: 'behind'  },
-  { id: 'pur',  code: 'PUR', name: 'Purchase',              leads: 'Harish',                  q1Pct: 0,  status: 'pending',   milestonesDone: 0, milestonesTotal: 0,  submission: 'not-submitted', pace: 'behind'  },
-  { id: 'hr',   code: 'HR',  name: 'Human Resources',       leads: 'Twinkle / Rahul / Nisha', q1Pct: 40, status: 'off-track', milestonesDone: 0, milestonesTotal: 9,  submission: 'submitted',     pace: 'ahead'   },
-  { id: 'fin',  code: 'FIN', name: 'Finance',               leads: 'Finance Team',            q1Pct: 0,  status: 'pending',   milestonesDone: 0, milestonesTotal: 0,  submission: 'not-submitted', pace: 'behind'  },
+  { id: 'rnd',  code: 'RND', name: 'R&D',                   leads: 'Machaiah / Shivangi',     q1Pct: 13.6, status: 'at-risk',   milestonesDone: 6,  milestonesTotal: 53, submission: 'submitted',     pace: 'on-pace' },
+  { id: 'pm',   code: 'PM+C', name: 'Product Management + CAS', leads: 'Ashwin R. / Reshma',  q1Pct: 16.3, status: 'at-risk',   milestonesDone: 6,  milestonesTotal: 57, submission: 'submitted',     pace: 'on-pace' },
+  { id: 'qara', code: 'QA',  name: 'QA / RA',               leads: 'Hariom / Nanda / Ramya',  q1Pct: 20.7, status: 'on-track',  milestonesDone: 12, milestonesTotal: 95, submission: 'submitted',     pace: 'on-pace' },
+  { id: 'sales',code: 'S&M', name: 'Sales & Marketing',     leads: 'Arindam / Amit',          q1Pct: 1.1,  status: 'off-track', milestonesDone: 0,  milestonesTotal: 4,  submission: 'partial',       pace: 'behind'  },
+  { id: 'mfg',  code: 'MFG', name: 'Manufacturing',         leads: 'Chandhan',                q1Pct: 1.1,  status: 'off-track', milestonesDone: 0,  milestonesTotal: 8,  submission: 'partial',       pace: 'behind'  },
+  { id: 'cs',   code: 'CS',  name: 'Customer Service',      leads: 'Laxmiputra',              q1Pct: 5.0,  status: 'off-track', milestonesDone: 2,  milestonesTotal: 53, submission: 'submitted',     pace: 'behind'  },
+  { id: 'pur',  code: 'PUR', name: 'Purchase',              leads: 'Harish',                  q1Pct: 0,    status: 'pending',   milestonesDone: 0,  milestonesTotal: 0,  submission: 'not-submitted', pace: 'behind'  },
+  { id: 'hr',   code: 'HR',  name: 'Human Resources',       leads: 'Twinkle / Rahul / Nisha', q1Pct: 21.1, status: 'on-track',  milestonesDone: 0,  milestonesTotal: 4,  submission: 'partial',       pace: 'on-pace' },
+  { id: 'fin',  code: 'FIN', name: 'Finance',               leads: 'Finance Team',            q1Pct: 0,    status: 'pending',   milestonesDone: 0,  milestonesTotal: 6,  submission: 'partial',       pace: 'behind'  },
 ];
 
 // ─── Upcoming deadlines (next 45 days) ──────────────────────────
