@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Irillic · OKR Program Dashboard · FY 2026-27</title>
+<style>
+  :root{
+    --emerald:#10b981; --emerald-bg:#ecfdf5; --emerald-tx:#047857;
+    --blue:#3b82f6; --blue-bg:#eff6ff; --blue-tx:#1d4ed8;
+    --amber:#f59e0b; --amber-bg:#fffbeb; --amber-tx:#b45309;
+    --red:#ef4444; --red-bg:#fef2f2; --red-tx:#b91c1c;
+    --slate:#94a3b8; --slate-bg:#f8fafc; --slate-tx:#64748b;
+    --ink:#1e293b; --line:#e2e8f0; --soft:#f1f5f9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f1f5f9;color:var(--ink);font-size:14px;line-height:1.45}
+  .mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+  .wrap{max-width:1500px;margin:0 auto;padding:0 24px}
+  /* header */
+  header{background:linear-gradient(100deg,#0f172a,#0f172a 55%,#1e1b4b);color:#fff}
+  header .wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:16px;padding-bottom:16px}
+  .logo{font-size:24px;font-weight:900;letter-spacing:-.5px}
+  .logo span{color:#38bdf8}
+  .hmeta{border-left:1px solid rgba(255,255,255,.15);padding-left:16px}
+  .hmeta b{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+  .hmeta p{font-size:12px;color:#94a3b8}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:8px 16px;font-size:12px;color:#e2e8f0}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  /* tabs */
+  .tabbar{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  .tabbar .wrap{display:flex;align-items:center;justify-content:space-between}
+  .tabs{display:flex;gap:24px;overflow-x:auto}
+  .tab{appearance:none;background:none;border:none;cursor:pointer;padding:16px 2px;font-size:14px;font-weight:600;color:var(--slate);white-space:nowrap;position:relative;font-family:inherit}
+  .tab:hover{color:var(--slate-tx)}
+  .tab.active{color:var(--blue)}
+  .tab.active::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--blue);border-radius:2px}
+  .qlabel{font-size:12px;color:var(--slate)}
+  main{padding:24px 0}
+  .card{background:#fff;border-radius:16px;border:1px solid #e2e8f099;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:20px}
+  .card.flush{padding:0;overflow:hidden}
+  .ttl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:var(--slate)}
+  .sub{font-size:12px;color:var(--slate);margin-top:2px}
+  .grid{display:grid;gap:16px}
+  .stack>*+*{margin-top:24px}
+  .row{display:flex;align-items:center}
+  /* badges */
+  .badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;display:inline-block}
+  .b-completed{background:var(--emerald-bg);color:var(--emerald-tx)}
+  .b-on-track{background:var(--blue-bg);color:var(--blue-tx)}
+  .b-at-risk{background:var(--amber-bg);color:var(--amber-tx)}
+  .b-off-track{background:var(--red-bg);color:var(--red-tx)}
+  .b-pending{background:var(--slate-bg);color:var(--slate-tx)}
+  .b-in-progress{background:var(--blue-bg);color:var(--blue-tx)}
+  .b-blocked{background:var(--red-bg);color:var(--red-tx)}
+  .b-not-started{background:var(--soft);color:var(--slate-tx)}
+  .b-critical{background:var(--red-bg);color:var(--red-tx)}
+  .b-high{background:var(--amber-bg);color:var(--amber-tx)}
+  .b-medium{background:var(--blue-bg);color:var(--blue-tx)}
+  /* progress */
+  .track{flex:1;height:10px;background:var(--soft);border-radius:999px;overflow:hidden}
+  .track.sm{height:6px}
+  .fill{height:100%;border-radius:999px}
+  .f-emerald{background:var(--emerald)} .f-blue{background:var(--blue)} .f-amber{background:var(--amber)} .f-red{background:var(--red)} .f-slate{background:#cbd5e1}
+  .tx-emerald{color:var(--emerald-tx)} .tx-blue{color:var(--blue-tx)} .tx-amber{color:var(--amber-tx)} .tx-red{color:var(--red-tx)} .tx-slate{color:var(--slate-tx)}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--slate);padding:12px;border-bottom:1px solid var(--line)}
+  td{padding:14px 12px;border-bottom:1px solid #f1f5f955;vertical-align:top}
+  tbody tr:hover{background:#f8fafc88}
+  .scroll{overflow-x:auto}
+  /* exec cards */
+  .stat{border-top:4px solid;display:flex;flex-direction:column;justify-content:center}
+  .stat .num{font-size:40px;font-weight:900;line-height:1}
+  .stat .lbl{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--slate-tx);margin-top:8px}
+  .stat .s{font-size:12px;color:var(--slate);margin-top:2px}
+  .gauge{position:relative;width:112px;height:112px;margin:0 auto}
+  .gauge .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gauge .val b{font-size:30px;font-weight:900}
+  .gauge .val s{font-size:9px;color:var(--slate);text-decoration:none}
+  .legrow{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:1px 0}
+  .legrow span{display:flex;align-items:center;gap:6px;color:var(--slate-tx)}
+  .legrow b{color:#334155}
+  /* function cards */
+  .fcard{border:1px solid var(--line);border-left:4px solid;border-radius:12px;padding:16px}
+  .fcode{width:36px;height:36px;border-radius:8px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--slate-tx)}
+  /* deadlines */
+  .dline{flex:0 0 256px;border:2px solid #fecaca;background:#fef2f230;border-radius:12px;padding:16px}
+  /* timeline */
+  .tl-row{display:flex;align-items:center;padding:16px 0;border-bottom:1px solid #f1f5f955}
+  .tl-name{width:190px;flex-shrink:0;padding-right:16px}
+  .tl-bar{flex:1;position:relative;height:24px}
+  .tl-bar .base{position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;height:6px;background:var(--soft);border-radius:999px}
+  .tl-bar .prog{position:absolute;top:50%;transform:translateY(-50%);left:0;height:6px;border-radius:999px}
+  .tl-bar .today{position:absolute;top:0;bottom:0;width:1px;background:#cbd5e1}
+  .tl-bar .plane{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:14px}
+  .tl-pct{width:80px;flex-shrink:0;text-align:right}
+  .tl-pct b{font-size:18px;font-weight:900}
+  .tl-pct s{display:block;font-size:11px;font-weight:700;text-decoration:none}
+  .qhead{margin-left:190px;display:grid;grid-template-columns:repeat(4,1fr);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--slate);border-bottom:1px solid var(--line);padding-bottom:8px}
+  /* trend cards */
+  .tcard{border:1px solid var(--line);border-radius:12px;padding:16px}
+  .tcard.red{border-color:#fecaca}
+  /* filter chips */
+  .chip{font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--slate-tx);cursor:pointer;font-family:inherit}
+  .chip.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .keyrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--slate)}
+  .hidden{display:none}
+  footer{padding:32px 24px;text-align:center;font-size:12px;color:var(--slate)}
+  @media (max-width:900px){.hmeta{display:none}}
+  @media print{.tabbar{position:static}.tab{display:none}.tab.active{display:inline}body{background:#fff}.card{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="row" style="gap:16px">
+      <div class="logo">IRILLIC<span>°</span></div>
+      <div class="hmeta">
+        <b id="h-title"></b>
+        <p id="h-lead"></p>
+      </div>
+    </div>
+    <div class="pill"><span class="dot" style="background:#34d399"></span><span class="mono" id="h-date"></span></div>
+  </div>
+</header>
+
+<div class="tabbar">
+  <div class="wrap">
+    <nav class="tabs" id="tabs"></nav>
+    <span class="qlabel mono" id="q-label"></span>
+  </div>
+</div>
+
+<main class="wrap">
+  <section id="view-executive" class="view stack"></section>
+  <section id="view-functional" class="view stack hidden"></section>
+  <section id="view-dependencies" class="view stack hidden"></section>
+  <section id="view-trends" class="view stack hidden"></section>
+</main>
+
+<footer id="foot"></footer>
+
+<script>
+// ════════════════════ DATA (from Master OKR Sheet · Q1 FY27, as of 29 Jun 2026) ════════════════════
+const meta={org:'Irillic Pvt. Ltd.',lead:'Ramya Krishnadas',title:'OKR Program Dashboard',fy:'FY 2026-27',asOf:'29 Jun 2026',asOfShort:'Jun 28',quarter:'Q1',quarterRange:'Apr–Jun 2026',fyProgressPct:25,health:10};
+const rollup={completed:0,onTrack:2,atRisk:6,offTrack:8,pending:17,total:33};
+const headline={totalKRs:33,objectives:5,healthyKRs:2,needAttention:14,milestoneGaps:4};
+const objectives=[
+ {num:1,priority:1,short:'L.nm WL & NIR — India Base',title:'Establish a successful and strong base of L.nm — WL & NIR with competition in India',krCount:6,teams:['Sales','QA/RA','Product Mgmt+CAS','RND','MFG'],annual:15,q1:15,target:25,status:'off-track',risk:'BIS approval, CAS training & WL+NIR production release — all at risk',delta:8},
+ {num:2,priority:2,short:'.nm — Revenue Engine',title:'Establish Irillic .nm (Base & HD) as a market-reliable revenue engine — domestic & global',krCount:6,teams:['Sales','Product Mgmt+CAS','QA/RA','MFG'],annual:12,q1:12,target:25,status:'off-track',risk:'Intl regulatory clearances behind Q2; distributor onboarding delayed in identified .nm markets',delta:7},
+ {num:3,priority:3,short:'P&L Cost Efficiency',title:'Drive P&L cost efficiency and maximize gross margin — EBITDA positive',krCount:7,teams:['Finance','Purchase','MFG','HR'],annual:3,q1:3,target:25,status:'off-track',risk:'Finance & Purchase not submitted; no active milestone data',delta:2},
+ {num:4,priority:4,short:'NPD Portfolio Milestones',title:'Strengthen product portfolio — X.nm, V2 .nm, V2 L.nm milestone delivery',krCount:7,teams:['RND','Product Mgmt+CAS','QA/RA','MFG'],annual:3,q1:3,target:25,status:'pending',risk:'NPD milestones start Q2+; foundation being laid',delta:2},
+ {num:5,priority:5,short:'New Business — 3Y Horizon',title:'Develop new business streams & identify inorganic opportunities (3-year horizon)',krCount:7,teams:['RND','QA/RA','Finance','Leadership'],annual:7,q1:7,target:25,status:'pending',risk:'Long-horizon; foundation work begins Q2–Q3',delta:4},
+];
+const functions=[
+ {code:'RND',name:'R&D',leads:'Machaiah / Shivangi',q1:43,status:'at-risk',mDone:3,mTot:7,sub:'submitted',pace:'ahead'},
+ {code:'PM+C',name:'Product Management + CAS',leads:'Ashwin R. / Reshma',q1:22,status:'at-risk',mDone:0,mTot:0,sub:'not-submitted',pace:'on-pace'},
+ {code:'QA',name:'QA / RA',leads:'Hariom / Nanda / Ramya',q1:23,status:'off-track',mDone:3,mTot:25,sub:'submitted',pace:'on-pace'},
+ {code:'S&M',name:'Sales & Marketing',leads:'Arindam / Amit',q1:25,status:'at-risk',mDone:0,mTot:0,sub:'not-submitted',pace:'on-pace'},
+ {code:'MFG',name:'Manufacturing',leads:'Chandhan',q1:2,status:'off-track',mDone:0,mTot:14,sub:'submitted',pace:'behind'},
+ {code:'CS',name:'Customer Service',leads:'Laxmiputra',q1:9,status:'off-track',mDone:0,mTot:17,sub:'submitted',pace:'behind'},
+ {code:'PUR',name:'Purchase',leads:'Harish',q1:0,status:'pending',mDone:0,mTot:0,sub:'not-submitted',pace:'behind'},
+ {code:'HR',name:'Human Resources',leads:'Twinkle / Rahul / Nisha',q1:40,status:'off-track',mDone:0,mTot:9,sub:'submitted',pace:'ahead'},
+ {code:'FIN',name:'Finance',leads:'Finance Team',q1:0,status:'pending',mDone:0,mTot:0,sub:'not-submitted',pace:'behind'},
+];
+const deadlines=[
+ {task:'OQC yield Q1 close — 100% target',owner:'Nanda (QA/RA)',due:'Jun 30, 2026',p:'P1',left:'1d left'},
+ {task:'UAT Completion — stage gate process',owner:'Ramya (QA/RA)',due:'Jun 30, 2026',p:'P1',left:'1d left'},
+ {task:'Geography-wise regulatory strategy',owner:'Ramya (QA/RA)',due:'Jun 30, 2026',p:'P1',left:'1d left'},
+ {task:'HSW Arthroscope system validation',owner:'Hariom & Machaiah (QA/RA)',due:'Jun 30, 2026',p:'P3',left:'1d left'},
+ {task:'Stage gate process training rollout',owner:'Ramya (QA/RA)',due:'Jun 30, 2026',p:'P1',left:'1d left'},
+];
+const dependencies=[
+ {id:'D01',from:'RND / Product Mgmt + CAS',to:'MFG',kr:'KR 1.3',q:'Q2',due:'TBD — RND to confirm',status:'at-risk',desc:'L.nm WL + NIR design release to production (ECR sign-off) required before MFG can begin Aug launch unit build — currently pending'},
+ {id:'D02',from:'RND',to:'QA/RA',kr:'KR 1.6',q:'Q1',due:'Jun 30, 2026',status:'at-risk',desc:'BIS design readiness (ECR 22) must be released before QA/RA can submit BIS application for L.nm'},
+ {id:'D03',from:'RND',to:'MFG',kr:'KR 2.5',q:'Q1',due:'May 2026',status:'completed',desc:'PDF reporting ECR already released — enables MHMS production transfer and cost-out program'},
+ {id:'D04',from:'Product Mgmt + CAS',to:'QA/RA',kr:'KR 1.6',q:'Q1',due:'Jun 12, 2026',status:'completed',desc:'Hysteroscope model confirmation required before QA/RA initiates HSW regulatory filing'},
+ {id:'D05',from:'QA/RA',to:'Sales',kr:'KR 2.3',q:'Q2',due:'Jul 31, 2026',status:'in-progress',desc:'Philippines regulatory approval required before distributor deal can be formally closed'},
+ {id:'D06',from:'Sales',to:'Finance',kr:'KR 3.4',q:'Q1',due:'Jun 30, 2026',status:'blocked',desc:'ASP uplift targets must be finalized by Sales before Finance can begin monthly GM-by-product tracking'},
+ {id:'D07',from:'RND',to:'Purchase',kr:'KR 4.5',q:'Q2',due:'Aug 1, 2026',status:'not-started',desc:'L.nm V2 concept freeze (M0 Jul 2026) required before Purchase can identify and qualify long-lead components'},
+ {id:'D08',from:'MFG',to:'Purchase',kr:'KR 2.4',q:'Q1',due:'Jun 30, 2026',status:'blocked',desc:'Rolling 3-month build plan must be published before demand-aligned procurement can begin'},
+ {id:'D09',from:'QA/RA',to:'RND',kr:'KR 4.6',q:'Q1',due:'Jun 30, 2026',status:'at-risk',desc:'Stage gate process training must be completed before M0/M1 gate reviews can formally begin for NPD'},
+ {id:'D10',from:'HR',to:'Sales/CAS',kr:'KR 1.5',q:'Q2',due:'Aug 2026',status:'not-started',desc:'Critical field role hiring must close before CAS certification program can reach 100% for NIR launch'},
+ {id:'D11',from:'Purchase',to:'CS',kr:'KR 3.x',q:'Q1',due:'Jun 30, 2026',status:'at-risk',desc:'Spare parts pricing from suppliers required before CS can revise L.nm service and AMC rate card'},
+];
+const decisions=[
+ {priority:'high',type:'Mandate',raisedBy:'Ramya (QA/RA)',neededBy:'30-Jun-2026',text:'For this to work reliably, we need every function to report consistently and stay accountable for their numbers. Need leadership support to bring this in practice.'},
+ {priority:'high',type:'Unblock',raisedBy:'Saish (RND)',neededBy:'03-Jul-2026',text:'ECR-RND-22 (L.nm WL) has skipped its milestone tasks (production engg, pilot production, KOL validation – final etc) due to the delay in part procurement. If this is not fixed ASAP, it may significantly affect the L.nm NIR release date.'},
+];
+const blockers=[
+ {fn:'R&D',obj:'OBJ1',task:'Camera head IP testing milestone',owner:'Shivangi (RND)',reason:'Awaiting parts from DigiKey to complete internal camera head test for IP — creating delay in WL ECR closure'},
+ {fn:'R&D',obj:'OBJ1',task:'NIR ECR design milestone',owner:'Shivangi (RND)',reason:'Reason not provided'},
+ {fn:'QA / RA',obj:'OBJ1',task:'HSW Arthroscope system Validation report',owner:'Hariom & Machaiah (QA/RA)',reason:'2 samples of 4mm 30° Arth handed over to engineering team on 2nd Feb 2026 and Qty-2 on 14 Apr 2026 — validation not yet completed'},
+ {fn:'QA / RA',obj:'OBJ1',task:'Post-approval change application strategy',owner:'Hariom (QA/RA)',reason:'This KRA cannot be initiated without the ISO 13485 scope extension approval to include arthroscope.'},
+ {fn:'QA / RA',obj:'OBJ1',task:'BIS application — gap closure task',owner:'Nanda (QA/RA)',reason:'Delay due to no response from the BIS official — beyond Irillic control.'},
+ {fn:'QA / RA',obj:'OBJ2',task:'Philippines FDA regulatory approval',owner:'Ramya & Hariom (QA/RA)',reason:'Huge delay of more than 6 months from Philippines FDA post our submission — beyond Irillic control'},
+ {fn:'QA / RA',obj:'OBJ2',task:'Egypt regulatory submission',owner:'Hariom (QA/RA)',reason:'FSC received on 12th June 2026 — AR is currently reviewing all documents to be submitted. Confirmation from Amit needed to proceed to payment.'},
+ {fn:'QA / RA',obj:'OBJ3',task:'Finance team budget approval',owner:'Hariom (QA/RA)',reason:'Shared to Akram and Finance team for approval on 3rd Jun 2026 — approval still pending'},
+ {fn:'QA / RA',obj:'OBJ4',task:'UAT Completion',owner:'Ramya (QA/RA)',reason:'Key participants are occupied with NIR D&D — need to work out an alternate arrangement to complete the validation.'},
+ {fn:'Customer Service',obj:'OBJ1',task:'Train service team on CSAT survey execution support',owner:'Laxmiputra (CS)',reason:'No reason logged — flag to owner'},
+ {fn:'Customer Service',obj:'OBJ3',task:'Get latest spare parts price from suppliers',owner:'Harish (Purchase)',reason:'Supplier pricing not yet received from Purchase — blocks CS L.nm service & AMC rate card revision'},
+ {fn:'Human Resources',obj:'OBJ1',task:'Recruitment pipeline and timely hiring plan',owner:'HR & HOD',reason:'Due to absence of department-wise manpower requirement plan, difficult to maintain recruitment pipeline and ensure timely hiring'},
+];
+const risks=[
+ {sev:'critical',cat:'Production',owner:'Machaiah / Shivangi (RND) + Product Mgmt',by:'Jun 30, 2026',status:'active',desc:'L.nm WL + NIR design release to production (ECR sign-off) not yet complete — MFG cannot begin Aug launch unit build without this. Blocks entire production ramp.'},
+ {sev:'critical',cat:'Regulatory',owner:'Nanda (QA/RA)',by:'Jul 15, 2026',status:'active',desc:'BIS approval for L.nm NIR camera still pending — critical path for Aug 2026 launch. No signed timeline with QA/RA yet.'},
+ {sev:'critical',cat:'Blocked',owner:'Hariom / Nanda / Ramya (QA/RA)',by:'Jun 30, 2026',status:'blocked',desc:'Post-approval change application strategy flagged BLOCKED — no resolution path or owner assigned since escalation'},
+ {sev:'high',cat:'Training',owner:'Reshma (Sales/CAS)',by:'Jul 1, 2026',status:'active',desc:'CAS field training on L.nm WL at 10% — mandatory certification before any field demo or commercial sale'},
+ {sev:'high',cat:'Production',owner:'Chandhan (MFG)',by:'Jul 31, 2026',status:'active',desc:'MFG WL unit readiness at ~2% — Aug-end target at risk without immediate acceleration plan and resource review'},
+ {sev:'high',cat:'International',owner:'Amit (Sales)',by:'Jul 15, 2026',status:'active',desc:'Malaysia distributor agreement at 10%; Q2 activation deadline (Jul 2026) at risk — business case not yet approved'},
+ {sev:'high',cat:'International',owner:'Eduardo (Sales)',by:'Jul 15, 2026',status:'active',desc:'Brazil distributor agreement — Q2 activation at risk; business case and legal review pending'},
+ {sev:'medium',cat:'Data Gaps',owner:'Ashwin / Arindam / Harish / Pavan',by:'Jul 7, 2026',status:'active',desc:'Product Management + CAS, Sales & Marketing, Purchase and Finance milestone sheets not submitted — blind spots in clinical data, revenue tracking, cost tracking, and P&L governance'},
+ {sev:'medium',cat:'Planning',owner:'Harish (Purchase) + Chandhan (MFG)',by:'Jul 1, 2026',status:'active',desc:'MHMS negotiation timeline not established — 10% MFG cost reduction (Q2 target) cannot be baselined without a signed plan'},
+];
+// ════════════════════ CONFIG ════════════════════
+const RAG={'completed':{lbl:'Completed',f:'f-emerald',tx:'tx-emerald'},'on-track':{lbl:'On Track',f:'f-blue',tx:'tx-blue'},'at-risk':{lbl:'At Risk',f:'f-amber',tx:'tx-amber'},'off-track':{lbl:'Off Track',f:'f-red',tx:'tx-red'},'pending':{lbl:'Pending',f:'f-slate',tx:'tx-slate'}};
+const subDot={submitted:'#10b981',partial:'#f59e0b','not-submitted':'#ef4444'};
+const paceCfg={ahead:{lbl:'Ahead',c:'tx-emerald',f:'f-emerald'},'on-pace':{lbl:'On Pace',c:'tx-blue',f:'f-blue'},behind:{lbl:'Behind',c:'tx-red',f:'f-red'}};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $=id=>document.getElementById(id);
+
+// ════════════════════ HEADER + TABS ════════════════════
+$('h-title').textContent=`${meta.title} · ${meta.fy}`;
+$('h-lead').textContent=`Program Lead: ${meta.lead} · ${meta.org} · Sourced from Master OKR Sheet`;
+$('h-date').textContent=`${meta.asOf} · 09:00 AM`;
+$('q-label').textContent=`${meta.quarter} · ${meta.quarterRange}`;
+$('foot').textContent=`Irillic · ${meta.title} · ${meta.fy} · Data as of ${meta.asOf} · Sourced from Master OKR Sheet`;
+const TABS=[['executive','Executive Overview'],['functional','Functional Overview'],['dependencies','Dependencies'],['trends','Trends & Actions']];
+$('tabs').innerHTML=TABS.map((t,i)=>`<button class="tab${i===0?' active':''}" data-t="${t[0]}">${t[1]}</button>`).join('');
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  $('view-'+btn.dataset.t).classList.remove('hidden');
+});
+
+// ════════════════════ EXECUTIVE ════════════════════
+function execView(){
+  const circ=2*Math.PI*42, off=circ*(1-meta.health/100);
+  const leg=[['Completed',rollup.completed,'#10b981'],['On Track',rollup.onTrack,'#3b82f6'],['At Risk',rollup.atRisk,'#f59e0b'],['Off Track',rollup.offTrack,'#ef4444'],['Pending',rollup.pending,'#cbd5e1']];
+  const gauge=`<div class="card" style="display:flex;flex-direction:column;justify-content:center">
+    <p class="ttl" style="text-align:center;margin-bottom:8px">Program Health Score</p>
+    <div class="gauge"><svg width="112" height="112" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" stroke-width="7"/>
+      <circle cx="50" cy="50" r="42" fill="none" stroke="#dc2626" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${off}"/>
+    </svg><div class="val"><b>${meta.health}</b><s>out of 100</s></div></div>
+    <div style="margin-top:12px">${leg.map(l=>`<div class="legrow"><span><span class="dot" style="background:${l[2]}"></span>${l[0]}</span><b>${l[1]}</b></div>`).join('')}</div></div>`;
+  const stat=(num,lbl,s,brd,ntx,tint)=>`<div class="card stat" style="border-top-color:${brd};${tint?'background:'+tint:''}"><p class="num" style="${ntx?'color:'+ntx:''}">${num}</p><p class="lbl">${lbl}</p><p class="s">${s}</p></div>`;
+  const stats=stat(headline.totalKRs,'Total KRs',`across ${headline.objectives} objectives`,'#3b82f6')
+    +stat(headline.healthyKRs,'Healthy KRs','completed or on track','#10b981','#047857','#ecfdf522')
+    +stat(headline.needAttention,'Need Attention','at risk or off track','#ef4444','#b91c1c','#fef2f222')
+    +stat(headline.milestoneGaps,'Milestone Gaps','functions not submitted','#f59e0b','#b45309','#fffbeb22');
+  const q1bars=objectives.map(o=>`<div class="row" style="gap:12px"><span class="mono" style="width:48px;font-weight:800;color:var(--slate-tx);font-size:12px">OBJ${o.num}</span>
+    <div class="track"><div class="fill ${RAG[o.status].f}" style="width:${o.q1}%"></div></div>
+    <span class="${RAG[o.status].tx}" style="width:48px;text-align:right;font-weight:800;font-size:13px">${o.q1}%</span>
+    <span style="width:96px;text-align:right"><span class="badge b-${o.status}">${RAG[o.status].lbl}</span></span></div>`).join('');
+  const objRows=objectives.map(o=>`<div style="padding:16px;border-bottom:1px solid #f1f5f955;display:grid;grid-template-columns:1.6fr .9fr .7fr 1fr;gap:16px;align-items:start">
+    <div class="row" style="gap:12px;align-items:flex-start"><span style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:2px solid;display:flex;align-items:center;justify-content:center;font-weight:800" class="${RAG[o.status].tx}">${o.priority}</span>
+      <div><p style="font-weight:600;line-height:1.35">${esc(o.title)}</p><p class="sub">${o.krCount} KRs · ${o.teams.join(' · ')}</p></div></div>
+    <div><p class="ttl" style="font-size:10px">Annual</p><div class="row" style="gap:8px;margin-top:4px"><div class="track sm"><div class="fill ${RAG[o.status].f}" style="width:${o.annual}%"></div></div><b style="font-size:12px">${o.annual}%</b></div></div>
+    <div><p class="ttl" style="font-size:10px">Q1 Actual</p><p style="margin-top:4px"><b>${o.q1}%</b> <span class="sub">/ ${o.target}%</span></p></div>
+    <div><span class="badge b-${o.status}">${RAG[o.status].lbl}</span><p style="font-size:11px;color:var(--amber-tx);margin-top:4px;line-height:1.3">${esc(o.risk)}</p></div></div>`).join('');
+  const fcards=functions.map(f=>`<div class="fcard" style="border-left-color:${RAG[f.status].f==='f-emerald'?'#10b981':RAG[f.status].f==='f-blue'?'#3b82f6':RAG[f.status].f==='f-amber'?'#f59e0b':RAG[f.status].f==='f-red'?'#ef4444':'#cbd5e1'}">
+    <div class="row" style="justify-content:space-between;align-items:flex-start"><div class="row" style="gap:10px"><span class="fcode">${f.code}</span><div><p style="font-weight:800">${esc(f.name)}</p><p class="sub">${esc(f.leads)}</p></div></div><span class="dot" style="width:10px;height:10px;background:${subDot[f.sub]}"></span></div>
+    <div class="row" style="justify-content:space-between;margin-top:12px"><span class="sub">Q1 Progress</span><span class="${RAG[f.status].tx}" style="font-size:24px;font-weight:900">${f.q1}%</span></div>
+    <div class="track sm" style="margin-top:6px"><div class="fill ${RAG[f.status].f}" style="width:${f.q1}%"></div></div>
+    <div class="row" style="justify-content:space-between;margin-top:12px"><span class="badge b-${f.status}">${RAG[f.status].lbl}</span><span class="sub">${f.mDone}/${f.mTot} milestones</span></div></div>`).join('');
+  const dl=deadlines.map(d=>`<div class="dline"><div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="badge b-off-track">${d.left}</span><span class="mono sub">${d.p}</span></div>
+    <p style="font-weight:600;line-height:1.35">${esc(d.task)}</p><p class="sub" style="margin-top:8px">${esc(d.owner)}</p><p class="mono sub">${d.due}</p></div>`).join('');
+  return `
+   <div class="grid" style="grid-template-columns:repeat(5,1fr)">${gauge}${stats}</div>
+   <div class="card"><p class="ttl" style="margin-bottom:16px">Q1 Progress by Objective</p><div class="stack" style="--s:12px"><div style="display:flex;flex-direction:column;gap:12px">${q1bars}</div></div></div>
+   <div class="card flush"><div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"><p class="ttl">Objectives · ${meta.fy} | Annual Targets & Q1 Actuals</p><p class="sub">Priority 1 = highest</p></div>${objRows}</div>
+   <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px"><p class="ttl">Function Health · ${meta.quarter} 2026</p>
+     <div class="keyrow"><span><span class="dot" style="background:#10b981"></span>Sheet submitted</span><span><span class="dot" style="background:#f59e0b"></span>Partial</span><span><span class="dot" style="background:#ef4444"></span>Not submitted</span></div></div>
+     <div class="grid" style="grid-template-columns:repeat(3,1fr)">${fcards}</div></div>
+   <div class="card"><p class="ttl" style="margin-bottom:16px">Upcoming Deadlines · Next 45 Days</p><div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px">${dl}</div></div>`;
+}
+
+// ════════════════════ FUNCTIONAL ════════════════════
+function funcView(){
+  const rows=functions.map(f=>{const p=paceCfg[f.pace];const m=Math.min(98,Math.max(2,f.q1));const col=p.f==='f-emerald'?'#34d399':p.f==='f-blue'?'#60a5fa':'#f87171';
+    return `<div class="tl-row"><div class="tl-name"><p style="font-weight:800">${esc(f.name)}</p><p class="sub">${esc(f.leads)}</p></div>
+      <div class="tl-bar"><div class="base"></div><div class="prog" style="width:${m}%;background:${col}"></div><div class="today" style="left:25%"></div><div class="plane" style="left:${m}%">✈</div></div>
+      <div class="tl-pct"><b class="${p.c}">${f.q1}%</b><s class="${p.c}">${p.lbl}</s></div></div>`;}).join('');
+  return `<div class="card flush">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div><p class="ttl">Function Functional Overview · ${meta.fy}</p><p class="sub">✈ = current progress · ▮ = Today ${meta.asOfShort} (end of Q1 · ${meta.fyProgressPct}% of FY)</p></div>
+      <div class="keyrow"><span><span style="width:16px;height:3px;border-radius:2px;background:#34d399;display:inline-block"></span>Ahead</span><span><span style="width:16px;height:3px;border-radius:2px;background:#60a5fa;display:inline-block"></span>On Pace</span><span><span style="width:16px;height:3px;border-radius:2px;background:#f87171;display:inline-block"></span>Behind</span></div></div>
+    <div style="padding:16px 20px 0"><div class="qhead"><span>Q1 APR–JUN</span><span>Q2 JUL–SEP</span><span>Q3 OCT–DEC</span><span>Q4 JAN–MAR</span></div></div>
+    <div style="padding:0 20px">${rows}</div></div>`;
+}
+
+// ════════════════════ DEPENDENCIES ════════════════════
+let depFilter='all';
+function depView(){
+  const list=dependencies.filter(d=>depFilter==='all'||d.q===depFilter);
+  const rows=list.map(d=>`<tr><td class="mono sub">${d.id}</td>
+    <td><span class="mono" style="background:#eff6ff;color:#1d4ed8;padding:2px 6px;border-radius:4px;font-size:12px">${esc(d.from)}</span> <span class="sub">→</span> <span class="mono" style="background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;font-size:12px">${esc(d.to)}</span></td>
+    <td class="mono sub" style="white-space:nowrap">${d.kr}</td><td style="font-size:12px;max-width:420px">${esc(d.desc)}</td>
+    <td style="font-weight:800;font-size:12px;color:var(--slate-tx)">${d.q}</td><td class="mono sub" style="white-space:nowrap">${d.due}</td>
+    <td><span class="badge b-${d.status}">${d.status.replace('-',' ').toUpperCase()}</span></td></tr>`).join('');
+  const chips=['all','Q1','Q2','Q3'].map(q=>`<button class="chip${depFilter===q?' active':''}" data-q="${q}">${q==='all'?'All':q}</button>`).join('');
+  return `<div class="card flush">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div><p class="ttl">Cross-Functional Dependencies</p><p class="sub">Where one team's deliverable gates another's — the riskiest failures hide in these handoffs.</p></div>
+      <div style="display:flex;gap:6px" id="depchips">${chips}</div></div>
+    <div class="scroll"><table><thead><tr><th>#</th><th>Dependency</th><th>KR</th><th>Description</th><th>Qtr</th><th>Due</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="padding:12px 20px;border-top:1px solid var(--line)" class="keyrow"><b class="ttl">Status Key:</b>
+      <span><span class="dot" style="background:#10b981"></span>Completed</span><span><span class="dot" style="background:#3b82f6"></span>In Progress</span><span><span class="dot" style="background:#f59e0b"></span>At Risk</span><span><span class="dot" style="background:#ef4444"></span>Blocked</span><span><span class="dot" style="background:#94a3b8"></span>Not Started</span></div></div>`;
+}
+
+// ════════════════════ TRENDS ════════════════════
+function spark(pct,red){const apr=Math.max(2,pct-10),may=Math.max(3,pct-4),jun=pct,max=Math.max(jun,20);const y=v=>30-(v/max)*26;const st=red?'#dc2626':'#94a3b8';
+  return `<svg viewBox="0 0 76 32" style="width:100%;height:32px;margin-top:4px"><polyline points="4,${y(apr)} 38,${y(may)} 72,${y(jun)}" fill="none" stroke="${st}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="38" cy="${y(may)}" r="2" fill="${st}"/></svg>`;}
+function trendView(){
+  const decRows=decisions.map(d=>`<tr><td><span class="badge b-high">${d.priority}</span></td><td class="sub" style="font-size:12px">${esc(d.type)}</td><td style="font-size:12px;max-width:520px">${esc(d.text)}</td><td class="tx-blue" style="font-size:12px;white-space:nowrap">${esc(d.raisedBy)}</td><td class="mono sub" style="white-space:nowrap">${d.neededBy}</td></tr>`).join('');
+  const tcards=objectives.map(o=>{const red=o.status==='off-track';return `<div class="tcard${red?' red':''}"><p class="mono sub" style="font-size:10px">OBJ${o.num} · P${o.priority}</p>
+    <p style="font-size:24px;font-weight:900" class="${red?'tx-red':'tx-slate'}">${o.q1}%</p><p style="font-size:11px;color:var(--slate-tx);line-height:1.25;height:28px;margin-top:2px">${esc(o.short)}</p>
+    ${spark(o.q1,red)}<div class="row" style="justify-content:space-between;font-size:9px;color:var(--slate);margin-top:2px"><span>Apr</span><span>May</span><span class="${red?'tx-red':''}" style="font-weight:${red?'800':'400'}">Jun</span></div>
+    <p style="font-size:11px;font-weight:800;color:var(--emerald-tx);margin-top:4px">↑ +${o.delta}% vs May</p></div>`;}).join('');
+  const blkRows=blockers.map(b=>`<tr><td class="tx-red" style="font-weight:800;font-size:12px;white-space:nowrap">${esc(b.fn)}</td><td style="font-weight:800;font-size:12px;color:var(--slate-tx)">${b.obj}</td><td style="font-size:12px">${esc(b.task)}</td><td class="tx-red" style="font-style:italic;font-size:12px;max-width:420px">${esc(b.reason)}</td><td class="sub" style="font-size:12px;white-space:nowrap">${esc(b.owner)}</td></tr>`).join('');
+  const riskRows=risks.map(r=>`<tr><td><span class="badge b-${r.sev}">${r.sev.toUpperCase()}</span></td><td class="sub" style="font-size:12px">${esc(r.cat)}</td><td style="font-size:12px;max-width:420px">${esc(r.desc)}</td><td class="tx-blue" style="font-size:12px">${esc(r.owner)}</td><td class="mono tx-red" style="font-size:12px;white-space:nowrap">${r.by}</td><td><span class="badge ${r.status==='blocked'?'b-blocked':'b-at-risk'}">${r.status.toUpperCase()}</span></td></tr>`).join('');
+  return `
+   <div class="card flush" style="border-top:4px solid #3b82f6"><div style="padding:16px 20px;border-bottom:1px solid var(--line)"><p class="ttl">Leadership Decisions & Asks</p><p class="sub">Added after weekly sheet review · Persists across sessions · Drives the review meeting agenda</p></div>
+     <div class="scroll"><table><thead><tr><th>Priority</th><th>Type</th><th>Decision / Ask</th><th>Raised By</th><th>Needed By</th></tr></thead><tbody>${decRows}</tbody></table></div></div>
+   <div class="card"><p class="ttl">Month-over-Month Trend · Apr → May → Jun 2026</p><p class="sub" style="margin-bottom:16px">May is estimated baseline. Jun actuals from submitted milestone data. Trajectory matters more than the absolute number.</p>
+     <div class="grid" style="grid-template-columns:repeat(5,1fr)">${tcards}</div></div>
+   <div class="card flush" style="border-top:4px solid #ef4444"><div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+     <div><p class="ttl">Blockers — Sourced from Master Sheet</p><p class="sub">${blockers.length} tasks blocked across functions · Task, Owner, Reason sourced verbatim</p></div>
+     <span class="badge b-off-track" style="font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid #fecaca">${blockers.length} BLOCKED</span></div>
+     <div class="scroll"><table><thead><tr><th>Function</th><th>Obj</th><th>Milestone Task</th><th>Blocked Reason (verbatim)</th><th>Owner</th></tr></thead><tbody>${blkRows}</tbody></table></div></div>
+   <div class="card flush"><div style="padding:16px 20px;border-bottom:1px solid var(--line)"><p class="ttl">Risk Registry — Forward-Looking</p><p class="sub">Risks foreseen in the near future based on current trajectory · Explicit owner and resolution date</p></div>
+     <div class="scroll"><table><thead><tr><th>Severity</th><th>Category</th><th>Risk Description</th><th>Owner</th><th>Resolve By</th><th>Status</th></tr></thead><tbody>${riskRows}</tbody></table></div></div>`;
+}
+
+// ════════════════════ RENDER ════════════════════
+$('view-executive').innerHTML=execView();
+$('view-functional').innerHTML=funcView();
+$('view-dependencies').innerHTML=depView();
+$('view-trends').innerHTML=trendView();
+function bindDepChips(){document.querySelectorAll('#depchips .chip').forEach(c=>c.onclick=()=>{depFilter=c.dataset.q;$('view-dependencies').innerHTML=depView();bindDepChips();});}
+bindDepChips();
+</script>
+</body>
+</html>
