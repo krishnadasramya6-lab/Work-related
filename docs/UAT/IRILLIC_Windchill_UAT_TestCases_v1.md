@@ -137,21 +137,48 @@
 | Test Role | Product Manager (wcadmin) |
 
 **Preconditions:**
-- Custom attribute list shared by IRILLIC *(pending — see Open Items Q8)*
+- Phase 0 complete; logged in as wcadmin with access to Type and Attribute Management
 
 **Test Steps:**
-1. Navigate to **Type and Attribute Management** in Windchill
-2. Open **WTPart** type → verify custom attributes are present: `Make/Buy`, `Item Description`, `Qty`, `Unit`, `Level`, `Unit Price`, `Line Price`, `Manufacturer Name`, `Exempt from IQC`, `Safety Critical`
-3. Open **EPMDocument** (CAD Doc) type → verify custom attributes are present per IRILLIC CAD attribute list
-4. Open **WTDocument** type → verify custom attributes per IRILLIC document attribute list
-5. Attempt to save an object without a mandatory attribute → confirm save is blocked with an error message
+1. Navigate to **Site > Utilities > Type and Attribute Management**
+2. Open **WTPart** subtypes and verify type-specific custom attributes per subtype:
+
+   | WTPart Subtype | Custom Attributes |
+   |---|---|
+   | Sheet Metal Part | Material, Grade, Mass, Surface Area, Bounding Box |
+   | Machining Part | Material, Grade, Mass, Surface Area, Bounding Box |
+   | Casting Part | Material, Grade, Mass, Surface Area, Bounding Box |
+   | Plastic IM Part | Material, Grade, Mass, Surface Area, Bounding Box |
+   | Plastic Fab Part | Material, Grade, Mass, Surface Area, Bounding Box |
+   | 3D Printing Part | Material, Finish, Bounding Box |
+   | Printing Part | Material, Finish, Bounding Box |
+   | Mechanical Assembly | Mass, Bounding Box |
+   | Optics Assembly | Mass, Bounding Box |
+   | Optics Part | Material, Surface Area, Mass, Bounding Box |
+   | Electrical Part | MPN, Manufacturer, Description, Voltage Rating, Current Rating, Power Rating, Category, Temperature Range |
+   | Packaging Part | Material, Mass, Bounding Box |
+
+3. Open **WTDocument** type → verify the following **common custom attributes** are present across ALL document subtypes:
+   `Document Sub-Type`, `DHF Category`, `Owning Business`, `Owning Site`, `Impacted Sites`, `Affected Process`, `Language`, `Date Released`, `Periodic Review Interval (in Years)`, `Last Reviewed Date`, `Training`, `Legacy Number`, `Legacy Revision`, `Process Owner`
+
+4. Open **WTDocument > QSM Datasets** sub-type → additionally verify: `Class`, `QMS Chapter`
+
+5. Open **EPMDocument** (CAD Document) type → verify CAD-specific attributes are present (as configured by Windchill/Creo integration)
+
+6. For each attribute, verify:
+   - Data type is correct (e.g., `Periodic Review Interval` = Integer; `Date Released` = Date; `DHF Category`, `Language`, `Owning Business` = Enumeration/dropdown; text fields = String)
+   - Mandatory / optional setting matches requirements
+
+7. Attempt to save a **WTPart** (Sheet Metal) without `Material` populated (if configured mandatory) → confirm save is blocked with an error message
 
 **Expected Results:**
-1. All custom attributes exist on the correct object types
-2. Mandatory attributes are enforced — save blocked if left empty
-3. Attribute data types are correct (e.g., Make/Buy = dropdown; Unit Price = decimal)
+1. All WTPart subtype-specific attributes present and correctly typed
+2. All 14 WTDocument common custom attributes present on all document types
+3. QSM Datasets additionally show `Class` and `QMS Chapter`
+4. Mandatory attribute enforcement triggers error on blank save
+5. Dropdown enumerations are populated with correct values
 
-**Pass Criteria:** All custom attributes present; mandatory enforcement confirmed  
+**Pass Criteria:** All custom attributes confirmed present per subtype; data types and mandatory rules verified  
 **Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
 
 ---
@@ -760,16 +787,41 @@
 
 **Test Steps:**
 1. Navigate to **OAK001 > Documents > New Document**
-2. In the Type dropdown, confirm all the following document types are available: Engineering Document, SOP, Test Plan, Quality Manual, Material Datasheet, Instructions for Use (IFU), External Document
-3. Select each type and confirm the appropriate attributes and mandatory fields appear for that type
-4. Create one document of type **Engineering Document** → confirm creation succeeds
+2. In the **Type** dropdown, confirm all the following IRILLIC document types (and sub-types) are available:
+
+   | Type | Sub-Types |
+   |---|---|
+   | External | Standards, Regulations, Agreements, Other |
+   | QSM Datasets (Policy) | Quality Manual, Quality Plan/Policy, Process, Policy |
+   | QA Certificate or License | Certificate, License |
+   | Quality Audit | Internal Audit, External Audit |
+   | Quality Form | Evaluation, Other |
+   | Quality Procedure | Procedure, Reference Material, Work Instruction |
+   | Non-Product Training | Training Material, Training Plan |
+   | Clinical Affairs | Clinical Evaluation, Clinical Study |
+   | Drawing | Integrated CAD, Non-Native |
+   | Manufacturing Form | Manufacturing, Quality Inspection, Service |
+   | Manufacturing Procedure | Equipment, Manufacturing, Quality, Service |
+   | Marketing | Covered, Promotional, Sales and Support |
+   | Process Design | Analysis, Plan, Review, Specifications |
+   | Product Design | Analysis, Design Review, Design Review Action Items, Design V&V, Design Validation, Design Verification, Detailed Design, DHF Supporting Document, Plan, Review, Software Document, Specifications, Standards Compliance Checklist, Traceability |
+   | Project Documentation | Financial, Intellectual Property, OEM, Other, Plan, Process, Product, Review, Supplier, Voice of Customer |
+   | Regulatory | Design Dossier, Essential Requirements Checklist, Intended Use, Technical File, Regulatory Document, Regulatory Plan, Risk Management File, Documents |
+   | Risk Management | Analysis, Plan, Report |
+   | Specification | Equipment, Labeling, Material, Packaging, Process, Software |
+   | Training | Training Material, Training Plan |
+   | Validation | Audits, Validation Package |
+
+3. Select **Product Design** type, sub-type **Specifications** → confirm the 14 common custom attributes are present
+4. Select **QSM Datasets** (Policy/Process) → confirm `Class` and `QMS Chapter` are additionally present
+5. Create one document of type **Product Design**, sub-type **Design Verification** → confirm creation succeeds and auto-number is assigned
 
 **Expected Results:**
-1. All 7 document types are listed in the type picker
-2. Each type presents its appropriate attribute set
-3. Engineering Document created successfully
+1. All 20 document types with their sub-types are listed in the type picker
+2. QSM Datasets present `Class` and `QMS Chapter`; all other types show the 14 common custom attributes
+3. Document created with auto-assigned number following IRILLIC numbering pattern
 
-**Pass Criteria:** All document types available and selectable; type-specific attributes present  
+**Pass Criteria:** All document types and sub-types available; type-specific attributes displayed correctly  
 **Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
 
 ---
@@ -784,24 +836,76 @@
 | Priority | Critical |
 | Test Role | Designer |
 
-**Preconditions:** Phase 1 complete; document type codes confirmed per Document Numbering sheet *(pending IRILLIC input)*
+**Preconditions:** Phase 1 complete; numbering rules configured per Requirements Gathering Worksheet
+
+**IRILLIC Document Numbering Reference:**
+
+*Product context documents* — pattern `[ProjectCode]-[TypeCode]-XXXX` where ProjectCode ∈ {OAK001, ELM001, XNM001}:
+
+| Document | Number Pattern | Example |
+|---|---|---|
+| Hardware Schematic | [ProjectCode]-A-XXXX | OAK001-A-0001 |
+| Mechanical (non-sheet metal) Drawing | [ProjectCode]-B-XXXX | OAK001-B-0001 |
+| Cable/Schematic Drawing | [ProjectCode]-C-XXXX | OAK001-C-0001 |
+| Data Sheets / PCB Gerbers / Operators Manual / System Variant | [ProjectCode]-D-XXXX | OAK001-D-0001 |
+| Label Artwork | [ProjectCode]-M-XXXX | OAK001-M-0001 |
+| BOM / Critical Component List | [ProjectCode]-R-XXXX | OAK001-R-0001 |
+| Datasheets | [ProjectCode]-S-XXXX | OAK001-S-0001 |
+| Assembly / IQC Test Procedure | [ProjectCode]-T-XXXX | OAK001-T-0001 |
+| Design History File (DHF) | [ProjectCode]-DHF-XX | OAK001-DHF-01 |
+| Design Input Requirement | [ProjectCode]-DIR-XX | OAK001-DIR-01 |
+| Design Review Report | [ProjectCode]-DRR-XX | OAK001-DRR-01 |
+| Design Output File | [ProjectCode]-DOF-XX | OAK001-DOF-01 |
+| Design Verification Plan | [ProjectCode]-VEP-XX | OAK001-VEP-01 |
+| Design Verification Report | [ProjectCode]-VER-XX | OAK001-VER-01 |
+| Design Validation Plan | [ProjectCode]-VAP-XX | OAK001-VAP-01 |
+| Design Validation Report | [ProjectCode]-VAR-XX | OAK001-VAR-01 |
+| Risk Management File | [ProjectCode]-RMF-XX | OAK001-RMF-01 |
+| Risk Management Plan | [ProjectCode]-RMP-XX | OAK001-RMP-01 |
+| Medical Device File | [ProjectCode]-MDF-XX | OAK001-MDF-01 |
+| First Article Inspection Report | [ProjectCode]-FAI-XXXXX | OAK001-FAI-00001 |
+| OQC Report | [ProjectCode]-OQC-XXXXX | OAK001-OQC-00001 |
+| Certificate of Analysis | [ProjectCode]-COA-XXXXX | OAK001-COA-00001 |
+| Deviation Note | [ProjectCode]-DN-XXXX | OAK001-DN-0001 |
+| Assembly Work Instruction | [ProjectCode]-WI-XXXX | OAK001-WI-0001 |
+| Software Requirements Specification | [ProjectCode]-SRS-XX | OAK001-SRS-01 |
+| Software Verification Report | [ProjectCode]-SVR-XX | OAK001-SVR-01 |
+
+*QMS Library documents* — prefix `IPL-`:
+
+| Document | Number Pattern | Example |
+|---|---|---|
+| Supplier Evaluation | IPL-SER-XXXX | IPL-SER-0001 |
+| Supplier Trend Analysis | IPL-STA-XXXX | IPL-STA-0001 |
+| Supplier Re-evaluation | IPL-SRR-XXXX | IPL-SRR-0001 |
+| Calibration Status & History | IPL-CSH-EQP-XXX | IPL-CSH-EQP-001 |
+| Internal Audit Schedule | IPL-IAS-XXXX | IPL-IAS-0001 |
+| Internal Audit Report | IPL-IAR-XXXX | IPL-IAR-0001 |
+| CAPA Report | CAPA-[DEP]-XX | CAPA-QA-01, CAPA-RND-01 |
+| Master Lists (all) | IPL-ML-[suffix]-XX | IPL-ML-TM-01, IPL-ML-QP-02 |
+| SLS Dataset Forms | IPL-SLS-F-XX | IPL-SLS-F-01 |
+| RND Dataset Forms | IPL-RND-F-XX | IPL-RND-F-01 |
+| MFG Dataset Forms | IPL-MFG-F-XX | IPL-MFG-F-01 |
+| RA Dataset Forms | IPL-RA-F-XX | IPL-RA-F-01 |
+| HR Dataset Forms | IPL-HR-F-XX | IPL-HR-F-01 |
 
 **Test Steps:**
-1. Create a new **Engineering Document** in OAK001 → leave Number blank → save
-2. Confirm auto-number assigned follows pattern: `OAK001-[TypeCode]-XXXX` (e.g., `OAK001-W-0001`)
-3. Create a second document of the same type → confirm sequence increments: `OAK001-W-0002`
-4. Create a document of a different type (e.g., SOP) → confirm its type code is different (e.g., `OAK001-S-0001`)
-5. Create a document in **ELM001** → confirm prefix changes to `ELM001-[TypeCode]-XXXX`
-6. Attempt to manually enter a number that already exists → confirm duplicate is rejected
+1. Create a new **Product Design** document (sub-type: Design Verification) in **OAK001** → leave Number blank → save
+2. Confirm auto-number assigned follows pattern `OAK001-VER-XX` (e.g., `OAK001-VER-01`)
+3. Create a second document of the same type → confirm sequence increments (e.g., `OAK001-VER-02`)
+4. Create a document of type **Drawing** (sub-type: Non-Native) in OAK001 → confirm pattern `OAK001-D-XXXX`
+5. Create the same type of document in **ELM001** → confirm prefix changes to `ELM001-VER-01`
+6. Navigate to **Library — Irillic QMS** → create a **Quality Audit** (sub-type: Internal Audit) document → confirm number follows `IPL-IAR-XXXX`
+7. Attempt to manually enter a number that already exists → confirm duplicate is rejected with error
 
 **Expected Results:**
-1. Auto-number assigned on save following `[ProductCode]-[TypeCode]-[Seq]` pattern
-2. Sequence increments correctly on each new creation
-3. Different document types use different type codes
-4. ELM001 prefix applied correctly
+1. Auto-number assigned on save following the IRILLIC numbering matrix above
+2. Sequence increments correctly on each new creation within same type
+3. Different product contexts (OAK001, ELM001) use their respective prefixes
+4. QMS Library documents use `IPL-` prefix with correct type code
 5. Duplicate number rejected with error message
 
-**Pass Criteria:** Auto-numbering consistent, unique, product-scoped, and type-differentiated  
+**Pass Criteria:** Auto-numbering consistent with IRILLIC numbering worksheet; unique, context-scoped, and type-differentiated  
 **Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
 
 ---
@@ -3696,15 +3800,16 @@ Any open S1 or S2 defect blocks UAT sign-off. S3/S4 defects may be deferred with
 
 ## Open Items — Pending Before Full Test Execution
 
-| # | Item | Owner | Impact |
-|---|---|---|---|
-| OI-01 | Document Numbering sheet — full type codes per document type | IRILLIC (Ramya) | Required for DM-TC-002, CAD-TC-010 |
-| OI-02 | Custom attribute complete list for all object types | IRILLIC (Ramya) | Required for ADM-TC-003, PM-TC-002 |
-| OI-03 | Watermarking (Wincom extension) installation | PDS Team | DM-TC-011 deferred until resolved |
-| OI-04 | Mail server configuration confirmation | PDS / IRILLIC IT | CM-TC-009, DM-TC-007 depend on this |
-| OI-05 | ProjectLink requirement details (PJL-001–003) | IRILLIC testing team | PJL-TC-001–007 based on OOTB |
-| OI-06 | MBOM transformation mechanism confirmation | PDS Team | BOM-TC-016 — clarify OOTB vs. MPMLink |
+| # | Status | Item | Owner | Impact |
+|---|---|---|---|---|
+| OI-01 | **CLOSED** | Document Numbering sheet — full type codes per document type | IRILLIC (Ramya) | DM-TC-002 updated with full IRILLIC numbering matrix (Requirements Gathering Worksheet, 24 Mar 2026) |
+| OI-02 | **CLOSED** | Custom attribute complete list for all object types | IRILLIC (Ramya) | ADM-TC-003 updated with all WTPart subtype attributes and WTDocument common attributes (Requirements Gathering Worksheet, 24 Mar 2026) |
+| OI-03 | Open | Watermarking (Wincom extension) installation | PDS Team | DM-TC-011 deferred until resolved |
+| OI-04 | Open | Mail server configuration confirmation | PDS / IRILLIC IT | CM-TC-009, DM-TC-007 depend on this |
+| OI-05 | Open | ProjectLink requirement details (PJL-001–003) | IRILLIC testing team | PJL-TC-001–007 based on OOTB |
+| OI-06 | Open | MBOM transformation mechanism confirmation | PDS Team | BOM-TC-016 — clarify OOTB vs. MPMLink |
 
 ---
 
-*IRILLIC — Windchill PLM 13.x UAT Test Case Document | CONFIDENTIAL — Not for Distribution | v1.0 Draft | 10 Jul 2026 | PDS Implementation Team*
+*IRILLIC — Windchill PLM 13.x UAT Test Case Document | CONFIDENTIAL — Not for Distribution | v1.1 Draft | 10 Jul 2026 | PDS Implementation Team*
+*v1.1 — Updated ADM-TC-003, DM-TC-001, DM-TC-002 with IRILLIC custom attributes and document numbering from Requirements Gathering Worksheet (24 Mar 2026); OI-01 and OI-02 closed*
