@@ -3813,3 +3813,1032 @@ Any open S1 or S2 defect blocks UAT sign-off. S3/S4 defects may be deferred with
 
 *IRILLIC — Windchill PLM 13.x UAT Test Case Document | CONFIDENTIAL — Not for Distribution | v1.1 Draft | 10 Jul 2026 | PDS Implementation Team*
 *v1.1 — Updated ADM-TC-003, DM-TC-001, DM-TC-002 with IRILLIC custom attributes and document numbering from Requirements Gathering Worksheet (24 Mar 2026); OI-01 and OI-02 closed*
+
+---
+
+## PHASE 10 — System Administration
+
+> **Test Owner:** PDS Implementation Team / IRILLIC IT  
+> **Prerequisites:** Phase 0 complete; Windchill 13.x fully installed; wcadmin credentials available; access to server OS and database console confirmed.  
+> **Scope:** User identity lifecycle, server operations and maintenance, backup and recovery, security and compliance. These tests are owned by the IT/sysadmin track and run independently of the functional UAT phases (1–9).
+
+---
+
+### SA-TC-001 · User Account Lifecycle — Creation to Deactivation
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-001 |
+| Title | Verify complete user account lifecycle from creation through deactivation |
+| Requirement Ref | SA-001 · 21 CFR Part 11 §11.10(d) |
+| Priority | Critical |
+| Test Role | wcadmin |
+
+**Preconditions:**
+- Logged in as wcadmin on Windchill site
+- Test user email address available (use a non-production test mailbox)
+
+**Test Steps:**
+1. Navigate to **Site > Utilities > Participant Administration > Create User**
+2. Create a new user: `uat.testuser01@irillic.com`, assign role **Designer**, associate to product **OAK001**
+3. Log in as `uat.testuser01` → confirm login succeeds and OAK001 is accessible with Designer permissions
+4. Return to wcadmin → navigate to Participant Administration → locate `uat.testuser01`
+5. Modify the user: change role from **Designer** to **Reviewer** → save
+6. Log in again as `uat.testuser01` → confirm role change is effective (Reviewer permissions, not Designer)
+7. Return to wcadmin → **Disable** the user account (set Enabled = No / Inactive)
+8. Attempt to log in as `uat.testuser01` → confirm login is **rejected** with an appropriate error message
+9. Re-enable the account → confirm login succeeds again
+10. Navigate to **Audit Trail** → confirm all changes in steps 2–9 are recorded with actor, timestamp, and action
+
+**Expected Results:**
+1. User created successfully with correct role
+2. Role change takes effect on next login
+3. Disabled account cannot log in — error message shown, no partial session opened
+4. Re-enabled account resumes access without data loss
+5. All account lifecycle events appear in audit trail
+
+**Pass Criteria:** Full lifecycle (create → modify → disable → re-enable) works correctly; all events audited  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-002 · Password Policy Enforcement
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-002 |
+| Title | Verify password complexity, expiry, and reuse policy is enforced |
+| Requirement Ref | SA-002 · 21 CFR Part 11 §11.10(d) |
+| Priority | Critical |
+| Test Role | wcadmin; test user |
+
+**Preconditions:**
+- Password policy configured in Windchill site properties (minimum length, complexity, expiry days, reuse count)
+- Test user `uat.testuser01` active
+
+**Test Steps:**
+1. As `uat.testuser01`, attempt to change password to a **too-short** value (e.g., 5 characters) → confirm rejection with error stating minimum length
+2. Attempt password with **no uppercase, no digit, no special character** → confirm rejection with complexity error
+3. Set a valid new password meeting all requirements → confirm change succeeds
+4. Attempt to set the password **back to the previous password** → confirm rejection with "cannot reuse recent password" message
+5. As wcadmin, set the user's password expiry to **1 day** → log in as test user the next day (or simulate expiry) → confirm forced password change prompt appears on login
+6. As wcadmin, confirm password policy settings are documented and stored in Windchill site configuration (not hard-coded)
+
+**Expected Results:**
+1. Short passwords rejected with specific error
+2. Non-complex passwords rejected with specific error
+3. Valid password accepted
+4. Password reuse blocked per configured reuse count
+5. Expired password forces change on login — user cannot bypass
+
+**Pass Criteria:** All password policy rules enforced; errors are specific and actionable  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-003 · Account Lockout After Failed Login Attempts
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-003 |
+| Title | Verify account locks after N failed login attempts and admin can unlock |
+| Requirement Ref | SA-003 · 21 CFR Part 11 §11.10(d) |
+| Priority | Critical |
+| Test Role | wcadmin; test user |
+
+**Preconditions:**
+- Account lockout threshold configured (e.g., 5 failed attempts)
+- Test user `uat.testuser01` active with known password
+
+**Test Steps:**
+1. Attempt to log in as `uat.testuser01` with an **incorrect password** — repeat until the lockout threshold is reached (e.g., 5 times)
+2. Confirm account is locked: next attempt (correct password) is **rejected** with a lockout message (not a generic "incorrect password")
+3. Attempt login again with the **correct password** → confirm still locked
+4. As wcadmin, navigate to Participant Administration → unlock `uat.testuser01`
+5. Log in as `uat.testuser01` with correct password → confirm login succeeds
+6. Confirm the lockout event and admin unlock are recorded in the **audit trail** with timestamps
+
+**Expected Results:**
+1. Account locks after configured number of failures
+2. Lockout message is distinct from "wrong password" (no information leakage about whether account exists)
+3. Correct password does not bypass lockout
+4. Admin unlock restores access immediately
+5. Both events (lockout + unlock) are audited
+
+**Pass Criteria:** Lockout enforced; admin unlock works; both events appear in audit trail  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-004 · Idle Session Timeout
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-004 |
+| Title | Verify idle sessions are terminated after the configured timeout period |
+| Requirement Ref | SA-004 · 21 CFR Part 11 |
+| Priority | High |
+| Test Role | Designer (test user) |
+
+**Preconditions:**
+- Session timeout configured in Windchill (e.g., 30 minutes idle)
+- Optionally reduce timeout temporarily to 2–3 minutes for testing
+
+**Test Steps:**
+1. Log in as **Designer** → open an object (e.g., a Part in OAK001)
+2. Leave the session idle for longer than the configured timeout period — do not interact with the browser
+3. After the timeout period, attempt any action (e.g., click a navigation link or save a form)
+4. Confirm a **session expired** message is shown and the user is redirected to the login page
+5. Confirm any unsaved changes are not silently persisted (or that the user is warned before timeout if configured)
+6. Log in again → confirm the session resumes normally with no data corruption
+
+**Expected Results:**
+1. Session terminates after idle timeout
+2. User is redirected to login — no action is performed without re-authentication
+3. Unsaved in-progress work is not silently committed to the database
+4. Login after timeout restores normal access
+
+**Pass Criteria:** Idle session terminates at configured threshold; re-authentication required  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-005 · Concurrent Session Control
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-005 |
+| Title | Verify behaviour when the same user logs in from multiple sessions simultaneously |
+| Requirement Ref | SA-005 |
+| Priority | Medium |
+| Test Role | Designer; wcadmin |
+
+**Preconditions:**
+- Two browsers or machines available for testing
+- Test user `uat.testuser01` active
+
+**Test Steps:**
+1. Log in as `uat.testuser01` on **Browser A** (Session 1) → confirm normal access
+2. Log in as the same user `uat.testuser01` on **Browser B** (Session 2) simultaneously
+3. Observe behaviour: does Session 1 get invalidated? Are both sessions allowed? Is a warning shown?
+4. If only one session is allowed: confirm Session 1 is invalidated and the user is notified
+5. If both sessions are allowed: open the same Part in both sessions, make conflicting edits, confirm check-out mechanism prevents overwrite
+6. Confirm the concurrent session behaviour matches IRILLIC's configured policy (confirm with wcadmin what policy is configured)
+
+**Expected Results:**
+1. Concurrent session behaviour is deterministic and matches configured policy
+2. If single-session enforced: earlier session is invalidated with notification
+3. If multiple sessions allowed: check-out/lock mechanism prevents data overwrite
+4. No silent data loss in any scenario
+
+**Pass Criteria:** Concurrent session behaviour is consistent with configured policy and documented  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-006 · Bulk User Provisioning and Directory Sync
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-006 |
+| Title | Verify bulk user import and (if applicable) LDAP/AD directory synchronisation |
+| Requirement Ref | SA-006 |
+| Priority | Medium |
+| Test Role | wcadmin |
+
+**Preconditions:**
+- A test CSV user import file prepared with 5 test users (name, email, role)
+- If LDAP/AD integration configured: test AD group and test AD user available
+
+**Test Steps:**
+1. **Bulk CSV import:** Navigate to Participant Administration → import the test CSV file with 5 users
+2. Confirm all 5 users are created with correct roles and container associations
+3. Attempt to import a CSV with a **duplicate username** → confirm graceful error; existing user not overwritten
+4. Attempt to import a CSV with a **missing mandatory field** → confirm validation error; import halted or skipped
+5. **(If LDAP configured)** Modify a user's role in the AD group → trigger or wait for sync → confirm role change propagates to Windchill
+6. **(If LDAP configured)** Disable a user in AD → confirm the Windchill account is also disabled on next sync
+7. Confirm all import and sync events are recorded in the Windchill audit log
+
+**Expected Results:**
+1. Valid CSV import creates all users correctly
+2. Duplicate username handled gracefully — no silent overwrite
+3. Invalid CSV rows flagged with specific errors
+4. AD sync propagates role and status changes within configured sync interval
+
+**Pass Criteria:** Bulk import succeeds for valid data; errors handled gracefully; sync (if applicable) is reliable  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-007 · User Account Change Audit Trail
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-007 |
+| Title | Verify all user account changes are logged immutably with actor and timestamp |
+| Requirement Ref | SA-007 · 21 CFR Part 11 §11.10(e) |
+| Priority | Critical |
+| Test Role | wcadmin |
+
+**Preconditions:**
+- Audit logging enabled in Windchill
+- At least one user account change performed (SA-TC-001 recommended as prerequisite)
+
+**Test Steps:**
+1. Navigate to **Site > Utilities > Audit** (or the configured audit report)
+2. Filter audit records for user account events: user creation, role change, disable, enable, password reset
+3. Confirm each event shows: **Event Type**, **Actor** (who performed the action), **Target** (which user was affected), **Timestamp** (NTP-synchronized), **Old Value**, **New Value**
+4. Attempt to **edit or delete an audit record** as wcadmin → confirm the system does not allow modification
+5. Attempt the same deletion via direct **database query** (coordinate with PDS DBA) → confirm audit table is write-protected or deletion is blocked
+6. Export the audit log to CSV or PDF → confirm the export is complete and readable
+
+**Expected Results:**
+1. All user account changes appear in audit log within 60 seconds of occurrence
+2. Each record includes actor, target, timestamp, and before/after values
+3. No UI or database mechanism allows editing or deleting audit records
+4. Audit export produces a complete, readable report
+
+**Pass Criteria:** Audit trail is complete, accurate, and immutable for all user account events  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-008 · Privilege Escalation Prevention
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-008 |
+| Title | Verify no non-admin user can grant themselves or others elevated permissions |
+| Requirement Ref | SA-008 |
+| Priority | Critical |
+| Test Role | Designer; Reviewer |
+
+**Preconditions:**
+- Test user logged in as **Designer** in OAK001
+
+**Test Steps:**
+1. Log in as **Designer** → navigate to **Site > Utilities > Participant Administration**
+2. Confirm Participant Administration is **not accessible** (redirect or permission denied)
+3. Attempt to directly access the admin URL (e.g., `/Windchill/app/#ptc1/tcomp/infoPage?oid=...`) as Designer → confirm access denied
+4. Log in as **Reviewer** → attempt to add a role group or modify another user's permissions → confirm blocked
+5. As **Designer**, attempt to change your own role via the user profile page → confirm no role-change option is available
+6. Confirm only **wcadmin** and **Site Administrators** can access Participant Administration
+
+**Expected Results:**
+1. Designer has no access to Participant Administration UI
+2. Direct URL access to admin functions is blocked with a permission error
+3. Reviewer cannot modify any user's roles
+4. No self-elevation mechanism is available in any role below Site Admin
+
+**Pass Criteria:** All privilege escalation paths are blocked for non-admin roles  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-009 · Windchill Service Start, Stop, and Restart
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-009 |
+| Title | Verify controlled shutdown and restart of Windchill services restores full functionality |
+| Requirement Ref | SA-009 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Server OS access (SSH or RDP) available to the PDS admin
+- Windchill `windchill shell` or service scripts accessible
+- No active checkout sessions in progress (confirm with team before test)
+
+**Test Steps:**
+1. Confirm Windchill is operational: log in as Designer → open OAK001 → confirm normal access
+2. On the server, execute a **controlled stop** of Windchill services: `windchill stop` (or equivalent service command)
+3. Confirm services stop in order: MethodServer → Tomcat → FileVault → Worker agents
+4. Attempt to log in to Windchill in a browser → confirm a **Service Unavailable** or maintenance page is shown (not a generic 500 error)
+5. Execute a **start** command: `windchill start`
+6. Monitor startup logs until all services report `Started` status
+7. Log in as Designer → navigate to OAK001 → open a Part and a Document → confirm full functionality
+8. Confirm no open checkout sessions were corrupted during the stop/start cycle
+
+**Expected Results:**
+1. Services stop cleanly in defined order with no errors in logs
+2. Browser shows a meaningful maintenance message during downtime
+3. Services restart fully within the documented maintenance window target
+4. No data loss or object corruption after restart
+5. All workers (CAD, Office, Thumbnail) resume automatically
+
+**Pass Criteria:** Controlled stop/start completes cleanly; full functionality restored; no data corruption  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-010 · Worker Service Health Monitoring and Recovery
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-010 |
+| Title | Verify CAD Worker, MS Office Worker, and Thumbnail Worker can be individually restarted and recovered |
+| Requirement Ref | SA-010 |
+| Priority | High |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- All three workers running: CAD Worker, MS Office Worker, Thumbnail Worker
+- A Creo `.prt` file and a `.docx` file available for testing
+
+**Test Steps:**
+1. Navigate to **Site > Utilities > Workers** (or Windchill worker monitor) → confirm all three workers show **Running** / **Connected** status
+2. Stop the **CAD Worker** only (via Worker management UI or service command)
+3. Attempt to upload a `.prt` and trigger a publish (PDF/STEP) → confirm the job **queues** (does not fail immediately) and an appropriate message is shown
+4. Restart the CAD Worker → confirm the queued publish job **processes automatically** without re-submission
+5. Repeat steps 2–4 for the **MS Office Worker** with a `.docx` upload
+6. Repeat steps 2–4 for the **Thumbnail Worker** (confirm thumbnail regenerates after restart)
+7. Simulate a worker crash (kill the process) → confirm the worker is restarted **automatically** by Windchill's watchdog (if configured); if not auto-restarted, confirm alert is generated
+
+**Expected Results:**
+1. All worker statuses are visible in the admin monitor
+2. Jobs queue when a worker is offline — they do not fail silently
+3. Queued jobs process automatically on worker restart without manual resubmission
+4. Auto-restart (if configured) recovers crashed workers within defined SLA
+5. Worker failure generates an alert to the system admin
+
+**Pass Criteria:** All three workers can be stopped, restarted, and recovered; queued jobs process on restart  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-011 · Log Management and Rotation
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-011 |
+| Title | Verify Windchill logs are written, rotated, and archived per policy |
+| Requirement Ref | SA-011 |
+| Priority | High |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Server OS access available
+- Log directory paths documented (e.g., `$WT_HOME/logs/`)
+
+**Test Steps:**
+1. Navigate to the Windchill log directory on the server → confirm the following log files exist and are actively written: MethodServer log, Tomcat `catalina.out`, Windchill audit log, Worker agent logs
+2. Confirm log entries have consistent timestamp format (ISO 8601 or equivalent) and are human-readable
+3. Perform a Windchill action (e.g., log in as Designer, open a Part) → confirm corresponding entries appear in the MethodServer log within 30 seconds
+4. Check log rotation configuration: confirm logs rotate daily or when they reach a configured size limit (not grown unbounded)
+5. Confirm rotated logs are **archived** (not deleted) with a date-stamped filename
+6. Confirm the retention period for archived logs is at least 1 year (or as per IRILLIC policy) — check that auto-purge does not delete logs prematurely
+7. Confirm the **audit log** is stored separately from application logs and has a longer retention period
+
+**Expected Results:**
+1. All expected log files exist and are actively written
+2. Log rotation is configured and working
+3. Rotated logs are archived, not deleted
+4. Audit logs have a longer retention period than application logs
+5. No log file is growing without bound (no rotation failure)
+
+**Pass Criteria:** Log files are written, timestamped, rotated, and retained per policy  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-012 · Database Connection Health and Failure Handling
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-012 |
+| Title | Verify Windchill handles database connection loss gracefully with no data corruption |
+| Requirement Ref | SA-012 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS DBA |
+
+**Preconditions:**
+- Access to database server (Oracle/SQL Server) console
+- Coordinate with team — this test temporarily disrupts the database connection
+
+**Test Steps:**
+1. Confirm Windchill is fully operational; log in as Designer
+2. Start a non-committed operation in Windchill (e.g., open the **New Part** form but do not save)
+3. At the database server, temporarily block or suspend the Windchill DB connection (e.g., pause the service for 30 seconds or block the port)
+4. In Windchill: attempt to save the in-progress operation → confirm an **error message** is shown (not a silent hang or a partial commit)
+5. Restore the database connection
+6. Confirm Windchill automatically reconnects to the database — no restart required (or restart if required and document)
+7. Confirm the partial operation from step 2 was **rolled back** — the incomplete Part does not appear in the system
+8. Create a new Part successfully → confirm database is fully operational after reconnection
+
+**Expected Results:**
+1. Database connection loss is surfaced as an error — not a silent failure
+2. In-progress uncommitted operations are rolled back cleanly
+3. No partial / corrupt objects appear after reconnection
+4. Windchill recovers automatically (or within a documented recovery procedure)
+
+**Pass Criteria:** DB connection failure handled gracefully; no data corruption; automatic recovery confirmed  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-013 · Disk Space Monitoring and Alerting
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-013 |
+| Title | Verify disk space monitoring is in place for file vault and database volumes with alerting |
+| Requirement Ref | SA-013 |
+| Priority | High |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Server monitoring tool configured (OS-level, Windchill dashboard, or third-party)
+- Windchill file vault volume and database volume identified
+
+**Test Steps:**
+1. On the server, confirm current disk usage of: (a) Windchill file vault volume, (b) database data volume, (c) log volume
+2. Confirm a monitoring alert is configured to fire when any volume exceeds **80%** capacity (or per IRILLIC threshold)
+3. Confirm a critical alert fires at **90%** capacity
+4. Review the most recent monitoring alert history — confirm alerts are being sent to the correct recipients (sysadmin email or monitoring platform)
+5. Simulate a near-full condition by temporarily reducing the alert threshold below current usage → confirm an alert is generated and received
+6. Confirm the documented procedure for responding to a disk space alert exists and names a responsible person
+
+**Expected Results:**
+1. Disk usage is visible in the monitoring dashboard for all three volumes
+2. Alerts fire at both warning (80%) and critical (90%) thresholds
+3. Alerts are delivered to the correct recipients
+4. A response procedure document exists
+
+**Pass Criteria:** Disk monitoring active on all volumes; warning and critical alerts confirmed functional  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-014 · Scheduled Maintenance Window Procedure
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-014 |
+| Title | Execute the documented maintenance runbook and confirm system returns to full operation |
+| Requirement Ref | SA-014 |
+| Priority | High |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Maintenance runbook document available (written by PDS)
+- Maintenance window scheduled and communicated to UAT team
+- No active UAT testing sessions during the window
+
+**Test Steps:**
+1. Confirm the maintenance runbook exists and is version-controlled
+2. Execute the runbook step-by-step: pre-maintenance checks → service stop → maintenance tasks (e.g., DB stats rebuild, log archive, cache clear) → service start → post-maintenance validation
+3. Time the full maintenance window from first stop to system-ready
+4. Post-maintenance: log in as Designer, Reviewer, Manager → confirm all roles can access their expected objects
+5. Upload a Creo file → confirm CAD Worker generates PDF/STEP outputs
+6. Upload a Word document → confirm Office Worker generates PDF
+7. Run a search query → confirm Windchill search index is functional
+8. Confirm the maintenance event is logged (who performed it, what was done, when, duration)
+
+**Expected Results:**
+1. Runbook is complete, unambiguous, and executable without undocumented steps
+2. System returns to full operation within the maintenance window SLA
+3. All functional areas (access, CAD, documents, search) operational post-maintenance
+4. Maintenance event logged with full details
+
+**Pass Criteria:** Runbook executed successfully; system fully operational within SLA; event documented  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-015 · SSL/TLS Certificate and HTTPS Enforcement
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-015 |
+| Title | Verify HTTPS is enforced and SSL certificate is valid and monitored for expiry |
+| Requirement Ref | SA-015 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Windchill URL and server certificate details available
+
+**Test Steps:**
+1. In a browser, navigate to the Windchill **HTTP** URL (non-secure) → confirm automatic redirect to HTTPS (not a login page over plain HTTP)
+2. Confirm the SSL certificate details: issuer is a trusted CA, subject matches the Windchill hostname, no browser certificate warning
+3. Check the certificate **expiry date** → confirm it is at least 60 days from today
+4. Confirm a certificate expiry alert is configured in the monitoring system (alert at 60 days, critical at 30 days)
+5. Check the TLS version: confirm only **TLS 1.2 or 1.3** is accepted; confirm TLS 1.0 and SSL 3.0 are disabled (use `openssl s_client` or an SSL scanner)
+6. Confirm the certificate renewal procedure is documented and responsibility is assigned
+
+**Expected Results:**
+1. HTTP → HTTPS redirect is enforced with no login over plain HTTP
+2. Certificate is valid, trusted, and not expiring imminently
+3. Expiry alert is configured and will fire before renewal is urgent
+4. Only modern TLS versions accepted
+5. Certificate renewal procedure is documented
+
+**Pass Criteria:** HTTPS enforced; certificate valid; modern TLS only; expiry monitoring in place  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-016 · Concurrent User Load Performance
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-016 |
+| Title | Verify Windchill response times remain acceptable under expected peak concurrent user load |
+| Requirement Ref | SA-016 |
+| Priority | Medium |
+| Test Role | wcadmin / PDS Performance Lead |
+
+**Preconditions:**
+- Expected peak concurrent user count agreed with IRILLIC (e.g., 15 simultaneous users)
+- Load test script or manual coordination with team members available
+
+**Test Steps:**
+1. Establish baseline: with 1 user, measure average page load time for: (a) opening OAK001 product page, (b) loading a Part details page, (c) running a search query
+2. Simulate **N concurrent users** (N = agreed peak count) all performing actions simultaneously — use either a load test tool or coordinate actual team members
+3. Measure response times for the same 3 operations under load
+4. Confirm no operation takes more than **5 seconds** under peak load (or per IRILLIC SLA)
+5. Check server CPU and memory utilisation during the load test — confirm no resource exhaustion
+6. After the load test, confirm no errors appear in Windchill logs and no data corruption occurred
+7. Document results: baseline vs. peak-load response times
+
+**Expected Results:**
+1. Baseline response time < 2 seconds for standard page loads
+2. Peak-load response time < 5 seconds (or per agreed SLA)
+3. No server resource exhaustion (CPU < 90%, heap not maxed out)
+4. No errors or data corruption after load test
+
+**Pass Criteria:** Response times within SLA under peak concurrent load; no errors or corruption  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-017 · System Clock and NTP Synchronisation
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-017 |
+| Title | Verify Windchill server is NTP-synchronised and audit timestamps are accurate |
+| Requirement Ref | SA-017 · 21 CFR Part 11 §11.10(e) |
+| Priority | Critical |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- NTP server address configured on the Windchill host OS
+- Access to server OS console
+
+**Test Steps:**
+1. On the Windchill server OS, run `timedatectl` (Linux) or equivalent → confirm NTP synchronisation is **active** and the server clock is synced to the NTP source
+2. Confirm the NTP server address is a reliable, publicly verifiable source or an internal authoritative NTP server
+3. In Windchill, perform an action (e.g., create a Part) → note the timestamp shown in the audit trail
+4. Compare the Windchill audit timestamp to the OS clock and to an external time reference (e.g., `time.google.com`) → confirm difference is within **± 1 second**
+5. Confirm the Windchill `site.xconf` or equivalent does not override the OS clock with a custom timezone that could mislead audit timestamps
+6. Document the NTP server address and sync status in the system configuration record
+
+**Expected Results:**
+1. NTP sync is active and confirmed on the OS
+2. Windchill audit timestamps match the NTP-synced OS clock within ±1 second
+3. No custom clock override is configured in Windchill
+4. NTP configuration is documented
+
+**Pass Criteria:** Server clock NTP-synced; audit timestamps accurate to within 1 second of NTP reference  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-018 · Scheduled Database Backup
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-018 |
+| Title | Verify database backup runs on schedule and produces a complete, valid backup file |
+| Requirement Ref | SA-018 · ISO 13485 §4.2.5 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS DBA |
+
+**Preconditions:**
+- Backup schedule configured (e.g., nightly at 02:00)
+- Backup destination storage accessible
+
+**Test Steps:**
+1. Review the backup job schedule — confirm it is set for the agreed frequency (e.g., daily full backup + hourly incremental, or as per IRILLIC policy)
+2. Check the backup job **last run log** → confirm: (a) job completed without errors, (b) timestamp matches scheduled time, (c) backup file size is non-zero and consistent with previous backups
+3. Confirm the backup file is written to a location **separate from the Windchill server** (e.g., NAS, object storage, or offsite)
+4. Verify the backup includes: Windchill database schema and data, Windchill fileserver vault (document/CAD file storage)
+5. Confirm **backup job failure alerts** are configured — a failed backup must notify the sysadmin within 1 hour
+6. Review backup retention policy: confirm at least the last 30 days of backups are retained (or per IRILLIC policy)
+
+**Expected Results:**
+1. Backup runs on schedule without errors
+2. Backup file is complete (non-zero, consistent size) and stored off-server
+3. Both database and file vault are included in backup scope
+4. Failure alert is configured and would fire if the job fails
+5. Retention policy retains sufficient history for point-in-time recovery
+
+**Pass Criteria:** Backup runs on schedule; complete; stored off-server; failure alerting confirmed  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-019 · File Vault Backup Completeness
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-019 |
+| Title | Verify the Windchill file vault (physical document and CAD files) is included in backup scope |
+| Requirement Ref | SA-019 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Windchill file vault path confirmed (e.g., `$WT_HOME/vaults/` or a dedicated NFS/SAN mount)
+- At least 10 documents and CAD files uploaded to Windchill
+
+**Test Steps:**
+1. Identify the Windchill file vault directory on the server — note its path and confirm it is a separate volume from the OS
+2. Confirm the backup script / job explicitly includes the file vault path (not just the database)
+3. Upload a new Creo `.prt` file and a new `.docx` document to Windchill
+4. After the next scheduled backup completes, confirm the newly uploaded files appear in the backup destination (check file count or compare vault size before/after backup)
+5. Confirm the backup of the file vault is **consistent** with the database backup (same snapshot timestamp — no partial backups where DB and vault are from different points in time)
+6. Document the file vault backup path and the tool used (e.g., rsync, enterprise backup agent)
+
+**Expected Results:**
+1. File vault path is identified and explicitly included in backup scope
+2. Newly uploaded files are captured in the next backup
+3. Database and file vault backups are time-consistent (no split-brain)
+4. File vault backup path and tool are documented
+
+**Pass Criteria:** File vault confirmed in backup scope; new files captured; time-consistent with DB backup  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-020 · Backup Integrity Verification (Test Restore)
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-020 |
+| Title | Restore a recent backup to an isolated test environment and verify data completeness |
+| Requirement Ref | SA-020 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS DBA |
+
+**Preconditions:**
+- Isolated restore target environment available (separate VM or schema — must not overwrite production)
+- Most recent full backup available
+- PDS DBA available to coordinate restore
+
+**Test Steps:**
+1. Document the expected content: total object count (Parts, Documents, CAD objects), a sample list of 5 specific objects by number, and their most recent revision
+2. Restore the most recent backup to the **isolated test environment** (database restore + file vault copy)
+3. Start Windchill pointing at the restored environment → confirm startup completes without errors
+4. Log in as wcadmin → navigate to OAK001 → confirm the 5 sample objects are present with correct revisions and lifecycle states
+5. Download the primary content file of one document and one CAD object → confirm files are intact and openable
+6. Run a search query → confirm search returns expected results (index intact)
+7. Check the restore log for any errors, skipped files, or warnings
+8. Document: time taken for restore, any errors encountered, and the restore date
+
+**Expected Results:**
+1. Restore completes without critical errors
+2. All 5 sample objects present with correct revisions and states
+3. File content is intact and openable
+4. Search index is functional after restore
+5. Restore time is within the RTO target
+
+**Pass Criteria:** Backup restores completely to isolated environment; data integrity confirmed; restore time within RTO  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-021 · Full System Disaster Recovery Drill
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-021 |
+| Title | Simulate total server failure and recover Windchill to full operation from backup |
+| Requirement Ref | SA-021 · ISO 13485 §4.2.5 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS Server Admin / PDS DBA |
+
+**Preconditions:**
+- DR runbook documented and reviewed
+- Recovery target environment available (clean server or VM)
+- Most recent full backup available
+- RTO target agreed with IRILLIC (e.g., 4 hours)
+
+**Test Steps:**
+1. Start the DR drill timer
+2. Follow the DR runbook from step 1: provision the recovery server (or use the pre-provisioned DR target)
+3. Install Windchill binaries on the recovery server (or confirm pre-installed)
+4. Restore database from the most recent full backup
+5. Restore file vault from backup
+6. Restore Windchill configuration files (`site.xconf`, policy admin exports, type/attribute configuration)
+7. Start all Windchill services (MethodServer, Tomcat, Workers) and confirm startup
+8. DNS / URL cutover to the recovery server (or update hosts file for testing)
+9. Log in as wcadmin, Designer, Reviewer → confirm each role has correct access
+10. Perform a full functional smoke test: create a Part, upload a document, check CAD Worker output
+11. Stop the drill timer → record total elapsed time
+12. Confirm elapsed time is within the agreed **RTO target**
+
+**Expected Results:**
+1. All services start successfully on the recovery server
+2. Data is complete and consistent with the last backup
+3. All roles can log in and perform their expected functions
+4. Full functional smoke test passes
+5. Elapsed time ≤ RTO target
+
+**Pass Criteria:** Full DR recovery successful within RTO; all functionality confirmed on recovery server  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-022 · Point-in-Time Recovery
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-022 |
+| Title | Restore Windchill to a specific point in time to recover from a bad data operation |
+| Requirement Ref | SA-022 |
+| Priority | High |
+| Test Role | wcadmin / PDS DBA |
+
+**Preconditions:**
+- Database is configured for point-in-time recovery (PITR) — archived redo logs (Oracle) or transaction log backups (SQL Server)
+- Isolated restore environment available
+
+**Test Steps:**
+1. Create a reference object at **Time T1**: create a Part `OAK001-PIR-TEST-0001`, release it → note the exact timestamp
+2. At **Time T2** (e.g., 1 hour later), simulate a bad operation: delete the configuration of a custom attribute (or perform another reversible destructive change) → note the timestamp
+3. Initiate a **point-in-time restore** to Time T1 + 30 minutes (i.e., after the Part was created but before the bad operation)
+4. Restore to the isolated environment
+5. Confirm in the restored environment: `OAK001-PIR-TEST-0001` exists (state from T1), and the bad operation from T2 has **not** occurred
+6. Document the achievable **RPO**: confirm the minimum data loss window (e.g., data loss of at most 1 hour if hourly transaction log backups are taken)
+
+**Expected Results:**
+1. Point-in-time restore succeeds to the specified timestamp
+2. Objects created before the target timestamp are present; changes after the target are absent
+3. RPO is confirmed and documented
+
+**Pass Criteria:** PITR restores to correct timestamp; RPO confirmed and within IRILLIC's tolerance  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-023 · Configuration Backup and Restoration
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-023 |
+| Title | Verify Windchill configuration is backed up separately and can be restored independently |
+| Requirement Ref | SA-023 |
+| Priority | High |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Windchill fully configured (types, attributes, lifecycles, ACL, numbering rules)
+
+**Test Steps:**
+1. Identify all configuration artefacts requiring backup:
+   - `site.xconf` and `wt.properties`
+   - Type and Attribute definitions (export from Type and Attribute Management)
+   - Lifecycle templates (export from Lifecycle Administration)
+   - Access Control Policy (export from Policy Administration)
+   - Numbering rules / auto-numbering configuration
+   - Organisation and container structure
+2. Confirm each of these is included in the backup job **or** has a documented manual export procedure
+3. Perform a manual export of the type/attribute configuration using the Windchill admin export tool
+4. On the isolated test environment (from SA-TC-020), delete one custom attribute definition
+5. Re-import the exported configuration → confirm the deleted attribute is restored
+6. Confirm the configuration backup is **versioned** (dated exports, not overwritten each time)
+
+**Expected Results:**
+1. All configuration artefacts are identified and included in backup scope
+2. Configuration export/import cycle works end-to-end
+3. Deleted configuration is fully restored from the export
+4. Configuration backups are versioned and retained
+
+**Pass Criteria:** All Windchill configuration artefacts are backed up and can be independently restored  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-024 · 10-Year Retention of Obsolete Documents in Backup
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-024 |
+| Title | Verify obsolete documents are retained in backup storage for 10 years and not purged |
+| Requirement Ref | SA-024 · ISO 13485 §4.2.5 · 21 CFR Part 820.180 |
+| Priority | Critical |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- At least one document in **Obsolete** lifecycle state in OAK001 (from DHF-TC-014)
+- Backup retention policy documentation available
+
+**Test Steps:**
+1. Identify the Obsolete document from DHF-TC-014 (or create and obsolete a test document)
+2. Confirm the document is present in the most recent backup (cross-reference object number in the backup restore from SA-TC-020)
+3. Review the backup **retention policy configuration**: confirm backups (or at minimum the final backup containing the document) are retained for **10 years** — not subject to a shorter auto-purge cycle
+4. Confirm there is no scheduled purge job that would delete the file vault content for Obsolete documents (Windchill no-delete policy covers the live system; this TC covers backup retention)
+5. Confirm the 10-year retention requirement is documented in the backup policy document and signed by the responsible owner at IRILLIC
+6. Confirm an annual review process exists to verify retention compliance
+
+**Expected Results:**
+1. Obsolete document confirmed in backup
+2. Backup retention policy is set to ≥ 10 years (or the backup is flagged for long-term retention)
+3. No auto-purge job targets Obsolete document content
+4. Retention policy is documented and owned
+
+**Pass Criteria:** Obsolete document retention in backup confirmed; 10-year policy documented and enforced  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-025 · Backup Failure Detection and Alerting
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-025 |
+| Title | Verify a failed backup job generates an alert to the system administrator within 1 hour |
+| Requirement Ref | SA-025 |
+| Priority | High |
+| Test Role | wcadmin / PDS Server Admin |
+
+**Preconditions:**
+- Backup alerting configured (email or monitoring platform)
+- Ability to deliberately fail the backup job (e.g., remove write permissions from backup destination temporarily)
+
+**Test Steps:**
+1. Remove write permissions from the backup destination folder (temporarily)
+2. Trigger the backup job manually (or wait for the scheduled run)
+3. Confirm the backup job fails and the failure is recorded in the backup job log
+4. Confirm an **alert is generated** and delivered to the sysadmin (email or monitoring alert) within the SLA window (e.g., 1 hour)
+5. Review the alert content — confirm it includes: job name, failure timestamp, failure reason, and recommended action
+6. Restore write permissions → re-run the backup → confirm the next run succeeds and a recovery notification is sent
+7. Confirm the failed backup event is retained in the job history (not overwritten by the successful retry)
+
+**Expected Results:**
+1. Failed backup job is detected and logged
+2. Alert is delivered to sysadmin within 1 hour
+3. Alert content is actionable (includes reason and recommended action)
+4. Successful re-run is logged and notified
+5. Failed run history is retained
+
+**Pass Criteria:** Backup failure detected and alerted within SLA; actionable alert content confirmed  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-026 · Audit Trail Immutability
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-026 |
+| Title | Verify the Windchill audit trail cannot be edited, deleted, or tampered with by any user including wcadmin |
+| Requirement Ref | SA-026 · 21 CFR Part 11 §11.10(e) |
+| Priority | Critical |
+| Test Role | wcadmin / PDS DBA |
+
+**Preconditions:**
+- Audit logging enabled; at least 20 audit records present
+
+**Test Steps:**
+1. Log in as **wcadmin** → navigate to the audit log (Site > Utilities > Audit or equivalent)
+2. Select an audit record → confirm there is **no Edit, Delete, or Modify** option in the UI
+3. Attempt to access the audit log table directly via the **Windchill database console** (coordinate with PDS DBA) → attempt to execute an `UPDATE` or `DELETE` on an audit record
+4. Confirm the database operation is **rejected** (restricted user permissions) or the table is write-protected
+5. Confirm the audit log has a **sequential record counter** or hash chain — any deletion would create a visible gap
+6. Export the audit log to a dated file → confirm the export is read-only and complete
+7. Confirm the audit log export procedure is documented in the system admin runbook
+
+**Expected Results:**
+1. No edit or delete option is available in the Windchill UI for audit records
+2. Database-level modification of audit records is blocked
+3. Sequential counter or hash mechanism makes tampering detectable
+4. Audit export produces a complete, read-only output
+
+**Pass Criteria:** Audit trail is immutable at both UI and database level; tamper-detection mechanism in place  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-027 · Role Separation — No Single-User Approve-and-Release
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-027 |
+| Title | Verify no single user can create, approve, and release a document or part without a second authorised signatory |
+| Requirement Ref | SA-027 · FDA 21 CFR Part 820.40 · ISO 13485 §4.2.4 |
+| Priority | Critical |
+| Test Role | Designer; Manager; wcadmin |
+
+**Preconditions:**
+- A document at **In Work** state in OAK001
+
+**Test Steps:**
+1. Log in as **Designer** → promote a document to **Under Review**
+2. Still as **Designer**, attempt to approve the document (promote to **Approved Not Effective**) → confirm the action is **blocked** (Designer does not have Set State permission in Under Review per ACL)
+3. Log in as **Manager** → approve the document → confirm e-signature prompt appears; complete e-signature
+4. Now as **Manager**, attempt to also **Release** the same document (promote to Released) → confirm the Manager can (or confirm whether a second approval is needed per IRILLIC workflow)
+5. Confirm **wcadmin** cannot sign-off a document as both initiator and approver within the same workflow instance
+6. Confirm the approval and release e-signatures in the audit trail show **different actors** for each state transition
+
+**Expected Results:**
+1. Designer cannot approve their own work
+2. No single user completes the full workflow (create → approve → release) without at least one other authorised actor
+3. Audit trail shows distinct actors at each gate
+
+**Pass Criteria:** Four-eyes principle enforced across the document lifecycle; confirmed in audit trail  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+### SA-TC-028 · System Validation Documentation (IQ/OQ/PQ Evidence)
+
+| Field | Value |
+|---|---|
+| TC ID | SA-TC-028 |
+| Title | Confirm Installation Qualification, Operational Qualification, and Performance Qualification documentation exists and is current |
+| Requirement Ref | SA-028 · FDA 21 CFR Part 11 §11.68 · GAMP 5 |
+| Priority | Critical |
+| Test Role | wcadmin / IRILLIC QA |
+
+**Preconditions:**
+- PDS implementation team has completed installation and configuration
+- IQ/OQ/PQ documents drafted by PDS
+
+**Test Steps:**
+1. Obtain the **Installation Qualification (IQ)** document from PDS → confirm it covers: server hardware and OS verified, Windchill version installed matches specification, all required software components (DB, Java, workers) installed and version-confirmed
+2. Obtain the **Operational Qualification (OQ)** document → confirm it references and links to the functional UAT test cases (Phases 1–9) or equivalent testing evidence
+3. Obtain the **Performance Qualification (PQ)** document → confirm it references SA-TC-016 (load test results) and SA-TC-020/SA-TC-021 (backup/DR test results)
+4. Confirm all three documents are: dated, version-controlled, authored by PDS, and awaiting IRILLIC QA sign-off
+5. Confirm a **re-validation trigger list** exists: events that require re-execution of IQ/OQ/PQ (e.g., Windchill patch, OS upgrade, server migration, major configuration change)
+6. Store IQ/OQ/PQ documents in the **Library — Irillic QMS** in Windchill under the correct document type (Regulatory > Documents or as per IRILLIC classification)
+
+**Expected Results:**
+1. IQ document confirms correct installation with version evidence
+2. OQ document references or includes functional test results
+3. PQ document references performance and DR test results
+4. All three documents are version-controlled and pending QA sign-off
+5. Re-validation triggers are documented
+
+**Pass Criteria:** IQ/OQ/PQ documentation complete, version-controlled, and stored in QMS  
+**Result:** Pass / Fail &nbsp;&nbsp; **Tester:** ___________ &nbsp;&nbsp; **Date:** ___________ &nbsp;&nbsp; **Defect ID:** ___________
+
+---
+
+## UAT Sign-Off Criteria
+
+> All **Critical** and **High** priority test cases must have a **Pass** result before UAT sign-off.  
+> No more than **3 Medium** priority failures may remain open at sign-off (each must have an agreed defect resolution date).  
+> All **Blocker** items (Phase 0 ENV checklist) must be marked ✓ before Phase 1 begins.  
+> All **Critical** defects raised during UAT must be closed or have an accepted workaround before Production Go-Live.
+
+## UAT Sign-Off Table
+
+| Signatory | Role | Phase(s) Covered | Result | Signature / e-Sig | Date |
+|---|---|---|---|---|---|
+| | UAT Lead | All Phases | | | |
+| | Product Manager | Phase 1, 2 | | | |
+| | QA Manager | Phase 3, 7, 10 | | | |
+| | R&D Lead | Phase 4, 5 | | | |
+| | Regulatory Affairs | Phase 7, 9 | | | |
+| | IT / System Admin | Phase 0, 10 | | | |
+| | PDS Implementation Lead | All Phases | | | |
+
+## Test Case Count Summary
+
+| Phase | Description | Count | TC Range |
+|---|---|---|---|
+| Phase 0 | Pre-UAT Environment Setup | 8 | ENV-001 to ENV-008 |
+| Phase 1 | Administration | 12 | ADM-TC-001 to ADM-TC-012 |
+| Phase 2 | Part Management | 10 | PM-TC-001 to PM-TC-010 |
+| Phase 3 | Document Management | 18 | DM-TC-001 to DM-TC-018 |
+| Phase 4 | CAD Data Management | 17 | CAD-TC-001 to CAD-TC-017 |
+| Phase 5 | BOM Management | 16 | BOM-TC-001 to BOM-TC-016 |
+| Phase 6 | Change Management | 12 | CM-TC-001 to CM-TC-012 |
+| Phase 7 | DHF & DMR | 14 | DHF-TC-001 to DHF-TC-014 |
+| Phase 8 | ProjectLink | 7 | PJL-TC-001 to PJL-TC-007 |
+| Phase 9 | Cross-Module Integration | 10 | INT-TC-001 to INT-TC-010 |
+| Phase 10 | System Administration | 28 | SA-TC-001 to SA-TC-028 |
+| **Total** | | **152** | |
+
+## Open Items — Pending Before Full Test Execution
+
+| # | Status | Item | Owner | Impact |
+|---|---|---|---|---|
+| OI-01 | **CLOSED** | Document Numbering sheet — full type codes per document type | IRILLIC (Ramya) | DM-TC-002 updated with full IRILLIC numbering matrix (Requirements Gathering Worksheet, 24 Mar 2026) |
+| OI-02 | **CLOSED** | Custom attribute complete list for all object types | IRILLIC (Ramya) | ADM-TC-003 updated with all WTPart subtype attributes and WTDocument common attributes (Requirements Gathering Worksheet, 24 Mar 2026) |
+| OI-03 | Open | Watermarking (Wincom extension) installation | PDS Team | DM-TC-011 deferred until resolved |
+| OI-04 | Open | Mail server configuration confirmation | PDS / IRILLIC IT | CM-TC-009, DM-TC-007 depend on this |
+| OI-05 | Open | ProjectLink requirement details (PJL-001–003) | IRILLIC testing team | PJL-TC-001–007 based on OOTB |
+| OI-06 | Open | MBOM transformation mechanism confirmation | PDS Team | BOM-TC-016 — clarify OOTB vs. MPMLink |
+| OI-07 | Open | RTO and RPO targets to be agreed with IRILLIC | IRILLIC IT / Management | SA-TC-021, SA-TC-022 |
+| OI-08 | Open | IQ/OQ/PQ documentation to be completed by PDS | PDS Team | SA-TC-028 |
+| OI-09 | Open | Password policy and session timeout values to be confirmed | IRILLIC IT | SA-TC-002, SA-TC-003, SA-TC-004 |
+
+---
+
+*IRILLIC — Windchill PLM 13.x UAT Test Case Document | CONFIDENTIAL — Not for Distribution | v1.2 Draft | 10 Jul 2026 | PDS Implementation Team*
+*v1.2 — Added Phase 10 System Administration (SA-TC-001 to SA-TC-028); updated TC count to 152; added OI-07 to OI-09; updated Sign-Off Table*
