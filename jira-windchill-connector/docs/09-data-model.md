@@ -156,6 +156,97 @@ CREATE TABLE audit_checkpoints (
   PRIMARY KEY (partition_key, seq)
 );
 
+
+-- ---------- traceability (13-traceability-model.md) ----------
+CREATE TABLE trace_links (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  flow_id       text NOT NULL,
+  type          text NOT NULL CHECK (type IN
+                ('satisfied_by','verified_by','implemented_by','impacts','published_as')),
+  jira_key      text,
+  jira_issue_id text,
+  windchill_oid text,
+  windchill_number text,
+  -- The revision this assertion was made against (INV-T1). Never nullable for T1.
+  asserted_against_revision text,
+  asserted_at   timestamptz NOT NULL DEFAULT now(),
+  asserted_by   jsonb NOT NULL,
+  current_revision text,
+  staleness     text NOT NULL DEFAULT 'unknown'
+                CHECK (staleness IN ('current','stale','unknown')),
+  -- T4 only: derived rows are a cache, not intent (INV-T3)
+  derived       boolean NOT NULL DEFAULT false,
+  invalidated_at timestamptz,
+  superseded_at timestamptz,
+  UNIQUE (flow_id, type, jira_issue_id, windchill_oid)
+);
+CREATE INDEX trace_links_stale_idx ON trace_links (flow_id, staleness)
+  WHERE superseded_at IS NULL;
+CREATE INDEX trace_links_jira_idx  ON trace_links (jira_issue_id);
+CREATE INDEX trace_links_wc_idx    ON trace_links (windchill_oid);
+
+CREATE TABLE coverage_status (
+  jira_issue_id text PRIMARY KEY,
+  jira_key      text NOT NULL,
+  status        text NOT NULL CHECK (status IN
+                ('NOT_COVERED','NOT_RUN','IN_PROGRESS','FAILED','PASSED','STALE','BLOCKED')),
+  test_count    int NOT NULL DEFAULT 0,
+  last_execution_key text,
+  last_executed_at   timestamptz,
+  stale_link_count   int NOT NULL DEFAULT 0,
+  computed_at   timestamptz NOT NULL DEFAULT now()
+);
+
+-- ---------- baselines (14-baseline-and-publish.md) ----------
+CREATE TABLE baselines (
+  id             text PRIMARY KEY,            -- 'BL-ALPHA-2026-08-22-001'
+  label          text NOT NULL,
+  flow_id        text NOT NULL,
+  product_container text NOT NULL,
+  scope_jql      text NOT NULL,
+  resolved_keys  jsonb NOT NULL,              -- frozen, not re-resolved
+  snapshot       jsonb NOT NULL,              -- entities + trace links + xray results
+  content_hash   text NOT NULL,
+  template_version text NOT NULL,
+  config_version bigint NOT NULL,
+  status         text NOT NULL DEFAULT 'frozen'
+                 CHECK (status IN ('frozen','published_pending','approved','rejected','superseded')),
+  overrides      jsonb NOT NULL DEFAULT '[]', -- completeness-gate overrides, with justification
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  created_by     jsonb NOT NULL
+);
+-- INV-B1: snapshot/content_hash/resolved_keys are never updated after insert.
+
+CREATE TABLE baseline_publications (
+  baseline_id      text NOT NULL REFERENCES baselines(id),
+  doc_kind         text NOT NULL CHECK (doc_kind IN ('SRS','VV_PLAN','VV_REPORT','TRACE_MATRIX')),
+  windchill_oid    text,
+  document_number  text,
+  revision         text,
+  submitted_at     timestamptz,
+  approved_at      timestamptz,
+  approvers        jsonb,
+  PRIMARY KEY (baseline_id, doc_kind)
+);
+
+CREATE TABLE baseline_membership (               -- INV-B5
+  baseline_id   text NOT NULL REFERENCES baselines(id),
+  jira_issue_id text NOT NULL,
+  jira_key      text NOT NULL,
+  PRIMARY KEY (baseline_id, jira_issue_id)
+);
+CREATE INDEX baseline_membership_issue_idx ON baseline_membership (jira_issue_id);
+
+CREATE TABLE where_used_cache (                  -- 15 §6 performance
+  endpoint_id   text NOT NULL,
+  child_oid     text NOT NULL,
+  parent_oid    text NOT NULL,
+  depth         int  NOT NULL,
+  bom_view      text NOT NULL DEFAULT 'Design',
+  refreshed_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (endpoint_id, child_oid, parent_oid, bom_view)
+);
+
 -- ---------- supporting ----------
 CREATE TABLE user_aliases (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -196,6 +287,9 @@ CREATE TABLE schema_cache (                         -- resolved fields, transiti
 | `work_items` (done) | 7 days |
 | `pending_writes` | expired rows swept every minute |
 | `schema_cache` | refreshed on config activation or every 24 h |
+| `baselines` | **Never deleted.** Retained for the product's regulatory lifetime; archived with snapshot intact |
+| `trace_links` (superseded) | Retained — link history is audit evidence |
+| `where_used_cache` | Invalidated on structure change; fully rebuilt nightly |
 
 ## Key query patterns
 

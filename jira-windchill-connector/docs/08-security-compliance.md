@@ -66,6 +66,33 @@ Append-only `audit_events`, tamper-evident:
 | Enduring | Retention policy + backup + export |
 | Available | Auditor role can export any record's full history on demand |
 
+## 4a. Posture A and the validation boundary (ADR-0008)
+
+The scope split makes this the central compliance argument, so state it plainly
+in the validation package:
+
+- **Jira and Xray are working surfaces, not record systems.** They hold
+  in-progress design inputs and V&V activity. They are not relied upon for
+  revision control, approval, effectivity or signature.
+- **Windchill holds the controlled records.** Baselines published from Jira become
+  WTDocument revisions and pass through Windchill's existing, already-validated
+  approval lifecycle with its e-signatures.
+- **The Bridge is the bridge, not a record system either.** It holds snapshots as
+  evidence of what was published, and an audit trail of everything it did.
+
+Consequences for validation scope:
+
+| System | Validation posture |
+|---|---|
+| Windchill | Already validated by the customer; unchanged by us |
+| Jira + Xray | Light — configuration control over the `Epic Category` field, workflows, and permission to edit `read_only_display` fields |
+| The Bridge | Category 4 configured product; full IQ/OQ/PQ per §6 |
+| Baseline renderers | The critical path — a rendering defect silently misstates a controlled record. Treat renderer tests as GxP-critical |
+
+The one thing this posture cannot tolerate: **a baseline that does not faithfully
+represent the Jira state it claims to snapshot.** Hence `INV-B1`/`INV-B2`, the
+content hash, and the regeneration requirement (S11).
+
 ## 5. Electronic signatures
 
 The Bridge **does not create or transfer electronic signatures.** Approvals stay
@@ -101,6 +128,10 @@ one more reason hooks are deliberately narrow.
 | Hazard | Cause | Mitigation | Residual |
 |---|---|---|---|
 | Wrong data propagated to a controlled record | Bad mapping | Dry-run gate, semantic validation, `onUnmapped: quarantine`, managed-block isolation | Low |
+| Published baseline misstates the Jira state | Renderer defect | Pure renderers, content hash, regeneration test (S11), GxP-critical renderer tests | Low |
+| Requirement reported verified against a superseded design output | Missing staleness detection | Revision-aware links (INV-T1), `PASSED` coupled to staleness (INV-T2) | Low |
+| Incomplete re-verification after a change | Impact analysis misses a path | Explainable impact paths, mandatory `NO_IMPACT` justification, BOM depth config, link-completeness gate | Medium — bounded by link quality |
+| Test evidence missing from the record | Connector reads Jira only, not Xray | INV-8; contract tests that assert run-level data is present | Low |
 | Duplicate change records created | Lost link table, retry | Tier-2 correlation fields, idempotency keys, INV-5 | Low |
 | Data not propagated (silent) | Dropped webhook, missed window | Polling as the primary signal, overlap margin, nightly reconciliation, lag alerts | Low |
 | Regulated record deleted | Filter/config error | No delete path exists at all (`06 §8`) | Very low |

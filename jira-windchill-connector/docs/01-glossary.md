@@ -36,6 +36,50 @@ Shared vocabulary. When a term below appears in code, use exactly this spelling.
 | **Changelog / History** | Per-issue field change history | Used for delta detection and echo suppression |
 | **App/Connect/Forge** | Jira Cloud extension models | Only relevant if we ship a Jira-side panel |
 
+
+## Xray terms
+
+| Term | Meaning | Notes for integration |
+|---|---|---|
+| **Test** | A test definition; a Jira issue of type `Test` | Reachable via Jira API |
+| **Precondition** | Reusable setup a Test depends on; a Jira issue | Jira API |
+| **Test Set** | Static grouping of Tests; a Jira issue | Jira API |
+| **Test Plan** | Planned scope of testing, usually per release/baseline; a Jira issue | Jira API; natural baseline scope |
+| **Test Execution** | A run campaign containing Test Runs; a Jira issue | **The sync checkpoint** (ADR-0011) |
+| **Test Run** | One Test executed within one Test Execution — status, evidence, executed-by | **NOT a Jira issue.** Xray API only |
+| **Test Step / Step result** | Per-step outcome within a Run | Xray API only |
+| **Coverable issue** | Issue type Xray treats as a requirement for coverage | Epic must be configured as one |
+| **Requirement coverage** | Xray-computed status of a requirement's verification | Consumed, not reinvented; filtered by Epic Category |
+| **Defect link** | Link from a failed Run to a Bug | Feeds the trace matrix |
+
+## Requirements & baseline terms (this programme)
+
+| Term | Meaning |
+|---|---|
+| **Epic Category** | Required Jira field discriminating `Requirement` from `Change` Epics (ADR-0010) |
+| **Requirement Epic** | A Jira Epic with `Epic Category = Requirement`; a design input |
+| **Change Work Package** | A Jira Epic with `Epic Category = Change`, created from a Windchill ECR |
+| **T1–T5** | The five cross-boundary trace link types (`13-traceability-model.md` §2) |
+| **Asserted-against revision** | The Windchill revision a trace link was made against |
+| **Staleness** | A link whose target has revised since assertion; invalidates verification |
+| **Coverage status** | Per-requirement roll-up: NOT_COVERED / NOT_RUN / IN_PROGRESS / FAILED / PASSED / STALE / BLOCKED |
+| **Baseline** | Immutable snapshot of a scoped Jira state at a moment |
+| **Publication** | Rendering a baseline into approved, revision-controlled Windchill documents |
+| **Drift** | Divergence of current Jira state from the last approved baseline |
+| **Posture A** | Jira is the working surface; Windchill holds the controlled record (ADR-0008) |
+| **Gate readiness** | Computed signal that a phase gate or ECN release may proceed |
+
+## Additional regulatory terms
+
+| Term | Meaning | Why we care |
+|---|---|---|
+| **Design input** | Requirements the design must satisfy | Jira Epics; published as SRS |
+| **Design output** | Specs, drawings, parts produced by the design | Windchill documents and parts |
+| **Design review** | Formal, documented review at a defined stage | A baseline trigger |
+| **V&V** | Verification (built right) and Validation (built the right thing) | Xray |
+| **Trace matrix** | Requirement → output → verification → result | Primary deliverable |
+| **ECR / ECN** | Engineering Change Request / Notice | Windchill change objects |
+
 ## Bridge (our) terms
 
 | Term | Meaning |

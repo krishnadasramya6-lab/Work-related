@@ -37,25 +37,58 @@ Every field mapping declares one of:
 
 > **Rule:** no GxP-relevant field may be `last_writer_wins`.
 
-## 3. Reference field mapping — Problem Report → Jira Bug (UC-1)
+## 3. Reference mappings
+
+### 3a. Windchill ECR → Jira Change Work Package Epic (UC-5, T3)
 
 | Windchill (source) | Jira (target) | Direction | Notes |
 |---|---|---|---|
-| `Number` (PR000123) | `customfield:Windchill ID` | initial_only | Also in summary prefix |
-| OID | `customfield:Windchill OID` | initial_only | Correlation key, tier-2 identity |
-| `Name` | `summary` | source_to_target | Truncate to 255, ellipsis |
-| `Description` | `description` | source_to_target | Text policy §7 |
-| `Severity` enum | `priority` | source_to_target | Value map §4 |
-| `Category`/soft type | `issuetype` | initial_only | Determines create shape |
-| `Product`/container | `project` | initial_only | Routing table in flow config |
-| `AffectedParts[]` | `customfield:Affected Parts` (labels/text) | source_to_target | Rendered as `PN-1234 rev B` |
-| `LifecycleState` | `status` | source_to_target | Via canonical states §5 |
+| `Number` (ECR-00412) | `cf:Windchill ID` | initial_only | Also in summary prefix |
+| OID | `cf:Windchill OID` | initial_only | Correlation key, tier-2 identity |
+| — | `Epic Category` | initial_only | **Constant `Change`** (ADR-0010) |
+| `Name` | `summary` | source_to_target | Truncate 255 |
+| `Description` | `description` | source_to_target | Managed block |
+| `Reason for Change` | `cf:Change Reason` | source_to_target | |
+| Product container | `project` | initial_only | Routing table |
+| `LifecycleState` | `status` | source_to_target | Canonical states |
 | `NeedDate` | `duedate` | bidirectional / source_wins | |
-| `Originator` | `reporter` | initial_only | Party resolution §6 |
-| `Assignee`/role | `assignee` | bidirectional / target_wins | Jira owns who does the work |
-| — | `resolution` | target_to_source | Feeds Windchill `Resolution` attribute |
-| — | `fixVersion` | target_to_source | Written to Windchill `SoftwareBuild` IBA |
-| — | Jira key | Windchill `JIRA_KEY` IBA + remote link | initial_only |
+| `Requester` | `reporter` | initial_only | Party resolution |
+| Assignee/role | `assignee` | bidirectional / target_wins | Jira owns who works |
+| Impact analysis result | `description` impact block | source_to_target | Rendered by `15` |
+| — | Epic child completion % | target_to_source | Feeds ECN release readiness |
+
+### 3b. Requirement Epic ↔ Windchill design output (UC-1, T1)
+
+Not a field mapping — a **trace link**, maintained per `13-traceability-model.md`.
+The Bridge writes only these read-only projections back into Jira:
+
+| Computed | Jira target field | Notes |
+|---|---|---|
+| Linked outputs | `cf:Design Outputs` | `SPEC-0031 rev B (RELEASED)` |
+| Link staleness | `cf:Trace Staleness` | `current` / `stale` / `unknown` |
+| Coverage status | `cf:Coverage Status` | Per `13` §4 |
+| Latest execution | `cf:Last Verified` | Date + Test Execution key |
+| Baseline membership | `cf:Baselines` | `BL-ALPHA-...-001 (SRS rev B, approved)` |
+
+All five are **`read_only_display`** — the Bridge owns them, humans never edit
+them, and a human edit is reverted on next sync with an audit event. Enforce with
+Jira field configuration where possible; the Bridge is the backstop, not the
+only control.
+
+### 3c. Coverage projection into Windchill (UC-2)
+
+Written onto the linked WTDocument/WTPart as IBAs:
+
+| Computed | Windchill attribute | Notes |
+|---|---|---|
+| Requirement count | `JIRA_REQ_COUNT` | Requirements linked to this output |
+| Coverage summary | `JIRA_COVERAGE` | `12 PASSED / 3 STALE / 2 FAILED` |
+| Worst-case status | `JIRA_COVERAGE_STATUS` | Drives gate readiness |
+| Last computed | `JIRA_COVERAGE_AT` | Staleness of the projection itself |
+| Jira link | Remote link / `JIRA_KEYS` | Navigation for Windchill-side users |
+
+`JIRA_COVERAGE_AT` matters: a Windchill reviewer must be able to tell whether
+they are reading a fresh projection or a stale one.
 
 ## 4. Value maps (enums)
 
@@ -191,7 +224,7 @@ opt-in because it mutates Jira structure.
 ```yaml
 filter:
   source:
-    kinds: [problem_report]
+    kinds: [requirement]
     predicate: >
       softType in ['com.acme.SoftwareProblemReport']
       and container.key in ['ALPHA','BETA']

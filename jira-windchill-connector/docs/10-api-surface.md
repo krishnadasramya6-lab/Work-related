@@ -46,6 +46,44 @@ POST   /quarantine/{id}/ignore    {reason}    audited
 POST   /quarantine/bulk-replay    {reason, flowId, limit}
 ```
 
+
+### Traceability
+```
+GET    /trace/requirements?flowId=&status=&stale=true
+GET    /trace/requirements/{jiraKey}            full chain: outputs, tests, results, changes
+GET    /trace/matrix?flowId=&format=csv|xlsx|pdf|json
+POST   /trace/links                {type, jiraKey, windchillOid, reason}   manual assertion
+DELETE /trace/links/{id}           {reason}     supersedes, never hard-deletes
+POST   /trace/recompute            {flowId, scope}   re-evaluate staleness + coverage
+GET    /trace/coverage?flowId=&status=
+```
+
+### Baselines
+```
+GET    /baselines?flowId=&status=
+POST   /baselines                  {label, scopeJql, productContainer, dryRun}
+GET    /baselines/{id}
+GET    /baselines/{id}/completeness   the gate report (14 §5)
+POST   /baselines/{id}/publish     {overrides:[{check, justification}]}   audited
+GET    /baselines/{id}/documents   rendered docs + Windchill numbers/revisions
+GET    /baselines/{id}/drift       divergence from current Jira state
+POST   /baselines/{id}/regenerate  re-render from snapshot; must be content-identical
+GET    /baselines/{id}/snapshot    the frozen snapshot, for audit
+```
+
+### Change impact
+```
+POST   /impact/analyze             {changeOid | partOid, revision, bomDepth, bomView}
+GET    /impact/{jobId}             async result for bulk ECNs
+POST   /impact/{jobId}/classify    {requirementKey, class, justification}   audited
+GET    /impact/where-used/{oid}?depth=&view=
+```
+
+### Gate readiness
+```
+GET    /gates/readiness?productContainer=&scope=    the signal Windchill consumes
+```
+
 ### Operations
 ```
 GET    /health                                liveness
@@ -110,6 +148,8 @@ flows:
 ## 4. API conventions
 
 - Auth: bearer token (OIDC from the customer IdP) or API key for automation.
+- A `NO_IMPACT` classification and any completeness-gate override require a
+  justification string; the API rejects an empty one.
 - Every mutating call requires `X-Reason` header when it affects synced data;
   the reason is recorded in the audit trail.
 - All mutating calls accept `Idempotency-Key`.

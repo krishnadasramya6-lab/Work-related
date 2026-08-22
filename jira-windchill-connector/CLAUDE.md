@@ -1,99 +1,120 @@
-# CLAUDE.md — Jira ⇄ Windchill PLM Integration ("Bridge")
+# CLAUDE.md — Jira ⇄ Windchill Design Control Bridge
 
-> This file is the **root context** for any agent or engineer working on this
-> product. Read it first, then load only the doc(s) relevant to your task from
-> the "Context routing" table below. Do not load the whole `docs/` tree.
+> Root context for any agent or engineer on this product. Read this first, then
+> load only the doc(s) your task needs from the routing table in §7.
 
 ## 1. What we are building
 
-A bidirectional, near-real-time synchronization and traceability platform between
-**Atlassian Jira** (issue tracking / software + project execution) and
-**PTC Windchill PLM** (product data, change management, documents, BOM).
+A bidirectional integration that keeps an **unbroken design control trace** across
+two systems that between them own the whole V-model.
 
-Comparable commercial products: OpsHub Integration Manager (OIM), Tasktop Hub /
-Planview Hub, ConnectALL, Kovair Omnibus. We are building a focused, opinionated
-equivalent for **regulated MedTech / hardware-software product development**.
-
-The core promise: *an engineer works only in Jira, a design-quality or
-manufacturing stakeholder works only in Windchill, and both see the same truth
-with a defensible audit trail.*
-
-## 2. Why it exists (problem statement)
-
-In regulated hardware+software companies:
-
-- Software defects, tasks and sprints live in **Jira**.
-- Product structure, CAD, specifications, Change Requests (CR), Change Notices
-  (CN), Problem Reports (PR), CAPA-linked records and controlled documents live
-  in **Windchill**.
-- Design controls (ISO 13485 §7.3, 21 CFR 820.30) require traceability from a
-  requirement → design output → verification → change → release.
-- Today that link is manual: someone copies a Windchill Problem Report number
-  into a Jira ticket description, and the two drift. Audits then fail on
-  "objective evidence of traceability".
-
-The Bridge removes the manual copy, keeps both systems authoritative for what
-they are good at, and produces an immutable, exportable audit trail.
-
-## 3. Non-goals (say no to these)
-
-- **Not** a replacement for Jira or Windchill. We never become the system of record.
-- **Not** a CAD data translator. We sync *metadata and links*, not geometry.
-- **Not** a BOM authoring tool. BOM structure is read-only from Windchill.
-- **Not** a general-purpose iPaaS. Two systems, done extremely well, beats twenty
-  done shallowly.
-- **No** direct database writes into Windchill or Jira. Public/supported APIs only.
-- **No** silent data loss: if we cannot map it, we quarantine and alert.
-
-## 4. Architectural stance (the five rules)
-
-1. **Every synced pair has a stable link record.** Nothing is matched by title,
-   summary text, or fuzzy heuristics at steady state.
-2. **Sync is idempotent and replayable.** Re-running a sync from any watermark
-   must converge to the same state. This makes disaster recovery and audits sane.
-3. **Loops are structurally impossible, not heuristically avoided.** See
-   `docs/06-sync-engine.md` §Echo suppression.
-4. **Field ownership is explicit per-field, per-direction.** There is no
-   "bidirectional" field without a declared conflict policy.
-5. **Everything is an event in an append-only log.** The audit trail is a
-   by-product of normal operation, not a separate feature.
-
-## 5. Context routing — load what you need
-
-| If your task is about… | Read |
+| Owns | System |
 |---|---|
-| Vocabulary, "what is a CN vs CR" | `docs/01-glossary.md` |
-| Product scope, personas, success metrics | `docs/00-product-brief.md` |
-| Entities, their identity and lifecycle | `docs/02-domain-model.md` |
-| Services, deployment, runtime topology | `docs/03-system-architecture.md` |
-| Calling Jira or Windchill APIs | `docs/04-integration-contracts.md` |
-| Field/state/user/attachment mapping rules | `docs/05-mapping-spec.md` |
-| Change detection, conflicts, ordering, retries | `docs/06-sync-engine.md` |
-| Failures, quarantine, alerting, metrics | `docs/07-reliability-observability.md` |
-| Auth, secrets, Part 11, audit trail, validation | `docs/08-security-compliance.md` |
-| Tables, indexes, retention | `docs/09-data-model.md` |
-| Our own REST/admin API and config format | `docs/10-api-surface.md` |
-| Writing or reviewing tests | `docs/11-testing-strategy.md` |
-| Sequencing work, what to build first | `docs/12-roadmap.md` |
-| Why a decision was made | `docs/adr/` |
-| Concrete config/payload shapes | `docs/examples/` |
-| Handing a scoped task to another agent | `context-packs/` |
+| Requirements (design inputs) | **Jira** — native Epics |
+| Verification & Validation | **Jira + Xray** |
+| Documents, Parts, BOM | **Windchill** |
+| Change management (ECR/ECN) | **Windchill** |
+| Project / phase gates | **Windchill** |
+| Controlled records & approvals | **Windchill** |
+
+The tool boundary runs straight through the middle of the design control
+V-model. The trace chain that ISO 13485 §7.3 and 21 CFR 820.30 require —
+*need → input → output → verification → change → release* — crosses that
+boundary at least four times.
+
+**This is not a convenience integration. It is the design control system.**
+If it fails, the company does not have a slow process; it has an unprovable one.
+
+## 2. The four settled decisions
+
+These are decided. Do not relitigate them in code review; open an ADR if you
+believe one is wrong.
+
+| # | Decision | ADR |
+|---|---|---|
+| 1 | **Posture A.** Jira is the *working surface*; Windchill holds the *controlled record*. Baseline-and-publish is mandatory, not optional. | ADR-0008 |
+| 2 | **Xray only** for test management. No Zephyr, no native-issue-type V&V. | ADR-0009 |
+| 3 | **Requirements are Jira Epics.** Each Windchill ECR also gets its own Epic as a change work package, discriminated by a required field. | ADR-0010 |
+| 4 | **Checkpoint-based result sync.** Test *Executions* at completion, never individual Test Runs. | ADR-0011 |
+
+## 3. Why Posture A shapes everything
+
+Jira has no revision control, no approval workflow, no effectivity, and no
+e-signature. Requirements and V&V results *are* design control records. So:
+
+- Engineers work freely in Jira. Nothing is frozen there.
+- At each baseline — design review, phase gate, release — the Bridge **renders
+  the Jira state into controlled Windchill documents** (SRS, V&V Plan, V&V
+  Report, Trace Matrix) and submits them to Windchill's approval lifecycle.
+- **Windchill's approval, with its e-signature, is what makes the record
+  controlled.** The Bridge never creates or transfers a signature.
+- Between baselines, the Bridge reports **drift**: how far current Jira state has
+  moved from the last approved baseline. Drift is the signal to re-baseline.
+
+Consequence: Jira needs only light validation. That is the entire point of
+Posture A, and it is worth a lot of money and ongoing freedom for the Jira admins.
+
+## 4. Architectural stance (the six rules)
+
+1. **Every synced pair has a stable link record.** Never fuzzy title matching.
+2. **Every cross-boundary link is revision-aware.** A link records the Windchill
+   revision it was made against. This is what makes staleness detectable.
+3. **Sync is idempotent and replayable.**
+4. **Loops are structurally impossible, not heuristically avoided.**
+5. **Field ownership is explicit per-field, per-direction.**
+6. **Everything is an event in an append-only, hash-chained log.**
+
+## 5. Non-goals
+
+- **Not** a replacement for Jira, Xray or Windchill. Never a third source of truth.
+- **Not** a CAD translator. Metadata and links only.
+- **Not** a BOM authoring tool. BOM is read-only projection from Windchill.
+- **No** e-signature creation or transfer (Posture A depends on this).
+- **No** per-Test-Run sync. Volume would flood Windchill and destroy the value
+  of the controlled record.
+- **No** deletes in either target system, ever.
+- **No** direct database writes. Supported APIs only.
 
 ## 6. Working agreements for agents
 
-- **State assumptions in the artifact, not just in chat.** If you assume
-  Windchill 13.0.2 with the OData/REST domain enabled, write it down.
-- **Never invent an API shape.** If you are unsure whether an endpoint exists,
-  mark it `// VERIFY:` and list what must be confirmed against a real tenant.
-  `docs/04-integration-contracts.md` tracks verification status per endpoint.
-- **Mapping changes are breaking changes.** Any edit to `05-mapping-spec.md`
-  requires a migration note and a version bump of the mapping schema.
-- **Compliance-relevant code paths are tagged** `// GxP` in source. Changing one
-  requires updating `docs/08-security-compliance.md` and the traceability matrix.
-- Prefer adding an ADR over relitigating a settled decision in code review.
+- **State assumptions in the artifact, not just in chat.**
+- **Never invent an API shape.** Mark `// VERIFY:` and add it to the checklist in
+  `docs/04-integration-contracts.md`, which tracks verification status per endpoint.
+- **Xray Test Runs are not Jira issues.** They are reachable only via the Xray
+  API. Getting this wrong is the most likely early design error.
+- **Mapping changes are breaking changes** — migration note + schema version bump.
+- Compliance-relevant paths are tagged `// GxP`; changing one requires updating
+  `docs/08-security-compliance.md` and the traceability matrix.
 
-## 7. Current status
+## 7. Context routing — load what you need
 
-Pre-implementation. This repository currently holds the **context and
-specification layer only**. No connector code has been written yet. The intended
-first executable milestone is M1 in `docs/12-roadmap.md`.
+Ordered by centrality, not by number.
+
+| If your task is about… | Read |
+|---|---|
+| **The trace chain and staleness rules** (start here) | `docs/13-traceability-model.md` |
+| **Baseline snapshots → controlled Windchill documents** | `docs/14-baseline-and-publish.md` |
+| **Change impact analysis, re-verification scope** | `docs/15-change-impact.md` |
+| Objectives, personas, success measures | `docs/00-product-brief.md` |
+| Vocabulary (Windchill, Xray, regulatory) | `docs/01-glossary.md` |
+| Canonical entities, identity, invariants | `docs/02-domain-model.md` |
+| Services, deployment, pipeline | `docs/03-system-architecture.md` |
+| Calling Jira, Xray or Windchill APIs | `docs/04-integration-contracts.md` |
+| Field/state/party mapping rules | `docs/05-mapping-spec.md` |
+| Change detection, conflicts, retries, volume control | `docs/06-sync-engine.md` |
+| Failures, quarantine, metrics, alerting | `docs/07-reliability-observability.md` |
+| Auth, Part 11, audit trail, validation package | `docs/08-security-compliance.md` |
+| Tables, indexes, retention | `docs/09-data-model.md` |
+| Bridge REST API and config format | `docs/10-api-surface.md` |
+| Writing or reviewing tests | `docs/11-testing-strategy.md` |
+| Sequencing, what to build first | `docs/12-roadmap.md` |
+| Why a decision was made | `docs/adr/` |
+| Concrete config/payload shapes | `docs/examples/` |
+| Handing a scoped task to an agent | `context-packs/` |
+
+## 8. Current status
+
+Pre-implementation. This repository holds the **context and specification layer
+only**. No connector code exists. First executable milestone is M1 in
+`docs/12-roadmap.md`; the blocking prerequisite is the M0 discovery spike
+(`context-packs/pack-05-discovery-spike.md`).

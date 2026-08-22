@@ -1,0 +1,59 @@
+# Reference flow: requirement trace spine (UC-1/UC-2, links T1 + T2)
+# This flow maintains trace links and writes read-only projections.
+# It is NOT a field-copy flow. See docs/13-traceability-model.md.
+schemaVersion: 2
+
+flows:
+  - id: requirement-trace
+    source: jira-cloud
+    target: windchill-prod
+    companions: [xray-cloud]            # run results come from here, not Jira
+    entityKinds: [requirement]
+    schedule: { pollIntervalSec: 60, reconcile: "0 3 * * *" }
+
+    filter:
+      source:
+        kinds: [requirement]
+        predicate: >
+          project in ['REQ'] and epicCategory == 'Requirement'
+        excludeStates: []
+
+    trace:
+      # T1 — requirement satisfied_by design output
+      satisfiedBy:
+        assertedFrom: "cf:Design Output Links"   # engineer-maintained in Jira
+        targetKinds: [document, part, cad_document]
+        revisionAware: true                      # INV-T1, non-negotiable
+        onMissingRevision: quarantine
+      # T2 — verification, consumed from Xray coverage
+      verifiedBy:
+        source: xray_coverage
+        filterByEpicCategory: Requirement        # exclude Change epics (ADR-0010)
+      hierarchy:
+        linkTypes: { down: decomposes_to, up: derived_from }
+        maxDepth: 6                              # INV-T4
+        cycleDetection: true
+
+    coverage:
+      rollup: per_requirement
+      # PASSED is impossible while any T1 link is stale/unknown (INV-T2)
+      passedRequiresCurrentLinks: true
+      testExecution:
+        completeWhen: all_runs_terminal
+        incompleteAgeAlertHours: 72
+
+    projections:
+      toJira:                                    # all read_only_display
+        onHumanEdit: revert_and_audit
+        fields:
+          - { computed: linkedOutputs,   target: "cf:Design Outputs" }
+          - { computed: staleness,       target: "cf:Trace Staleness" }
+          - { computed: coverageStatus,  target: "cf:Coverage Status" }
+          - { computed: lastVerified,    target: "cf:Last Verified" }
+          - { computed: baselines,       target: "cf:Baselines" }
+      toWindchill:                               # IBAs on the linked output
+        fields:
+          - { computed: requirementCount,  target: JIRA_REQ_COUNT }
+          - { computed: coverageSummary,   target: JIRA_COVERAGE }
+          - { computed: worstCaseStatus,   target: JIRA_COVERAGE_STATUS }
+          - { computed: computedAt,        target: JIRA_COVERAGE_AT }

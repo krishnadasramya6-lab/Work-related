@@ -101,6 +101,74 @@ Windchill descriptions are plain text or HTML. We therefore keep an internal
 rich-text intermediate and render per target. Round-tripping rich text is lossy;
 policy is in `05-mapping-spec.md` §Text.
 
+
+## Part A2 — Xray (test management)
+
+Assumed baseline: **Xray Cloud**. Xray Server/DC has a different API surface
+(`/rest/raven/2.0/...`, Jira auth) — confirm deployment in M0 before coding.
+
+> **The single most important fact in this document:** Test Runs and step
+> results are **not Jira issues** and are unreachable via the Jira REST API.
+> Test *definitions* come from Jira; test *evidence* comes from Xray. The
+> connector needs both.
+
+### A2.1 Authentication (Xray Cloud)
+
+| Step | Shape | Status |
+|---|---|---|
+| Obtain token | `POST https://xray.cloud.getxray.app/api/v2/authenticate` body `{client_id, client_secret}` → JWT string | LIKELY |
+| Use token | `Authorization: Bearer <jwt>` | LIKELY |
+| Lifetime | ~24 h; refresh proactively, never on 401-retry alone | LIKELY |
+
+Xray credentials are **separate** from Jira credentials — a distinct API key
+pair created in Xray's global settings. Two secrets, two rotation schedules.
+
+### A2.2 Endpoints
+
+| Purpose | Shape | Status |
+|---|---|---|
+| GraphQL (primary) | `POST https://xray.cloud.getxray.app/api/v2/graphql` | LIKELY |
+| Get tests | GraphQL `getTests(jql:, limit:, start:)` | LIKELY |
+| Get test executions | GraphQL `getTestExecutions(...)` | LIKELY |
+| **Test runs + results** | GraphQL `getTestRuns(testExecIssueIds:, limit:)` → status, steps, evidence, executedBy, dates | LIKELY |
+| Requirement coverage | GraphQL `getCoverableIssues(jql:)` → coverage status per requirement | ASSUMED |
+| Import results | `POST /api/v2/import/execution` (also `/junit`, `/xunit`) | LIKELY |
+| Export | `GET /api/v2/export/test` | ASSUMED |
+
+Issue-level entities (Test, Test Set, Test Plan, Test Execution) are ordinary
+Jira issues — fetch them through the **Jira** connector and join on issue id.
+Only run-level data comes from Xray.
+
+### A2.3 Coverage configuration prerequisite
+
+Xray computes requirement coverage natively, and we consume it rather than
+reinventing it (`13` §2, T2). This requires **Epic to be configured as a
+coverable issue type** in Xray's global settings.
+
+Because Epic also carries change work packages (ADR-0010), Xray will treat those
+as requirements too and pollute coverage metrics. Mitigation: the Bridge filters
+coverage results by `Epic Category = Requirement` before roll-up, and never
+reports raw Xray coverage numbers. **Verify in M0** that Xray's coverage API
+returns enough to make that filtering possible.
+
+### A2.4 Volume control
+
+Test Runs are by far the highest-volume entity — a nightly regression can produce
+thousands. Per ADR-0011:
+
+- Sync at **Test Execution completion**, not per run.
+- A Test Execution is "complete" when all its runs are in a terminal status, or
+  when it is explicitly closed. Both signals are configurable.
+- Never poll `getTestRuns` across all executions. Query per completed execution.
+- GraphQL `limit` caps at 100 per page — paginate, and expect that a large
+  execution needs several round trips.
+
+### A2.5 Rate limits
+
+Xray Cloud enforces per-tenant limits and returns `429`. Honour `Retry-After`.
+GraphQL query cost varies enormously by requested depth — request only the
+fields needed for roll-up, never the full run tree by default.
+
 ## Part B — Windchill
 
 Assumed baseline: **Windchill 12.x / 13.x with the REST (OData) services
@@ -192,6 +260,16 @@ overload a method server. Requirements:
 - [ ] Whether lifecycle can be driven via REST or needs IE/workflow
 - [ ] Soft types in use per customer, and their attribute lists
 - [ ] Jira deployment (Cloud vs DC), API version, webhook feasibility
+- [ ] Xray deployment (Cloud vs Server/DC) and API base URL
+- [ ] Xray API key pair issued; token lifetime confirmed
+- [ ] Epic configured as a coverable issue type in Xray
+- [ ] `Epic Category` field exists, is required, and its option values are fixed
+- [ ] Whether Xray coverage API exposes enough to filter by Epic Category
+- [ ] Test Execution "complete" signal available (all-runs-terminal vs closed)
+- [ ] Windchill soft types for DesignInputSpecification / VerificationValidationPlan /
+      VerificationValidationReport / TraceabilityMatrix exist or can be created
+- [ ] Windchill document create + revise + attach content payload shapes captured
+- [ ] Windchill where-used (BOM parent) query shape and performance at real depth
 - [ ] Jira required-fields-on-create per target project + issue type
 - [ ] Service account permission set on both sides (least privilege)
 - [ ] Attachment size limits on both sides

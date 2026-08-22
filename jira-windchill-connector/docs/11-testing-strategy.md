@@ -28,6 +28,9 @@ behaviour added to the fake, permanently.
 
 | Property | Statement |
 |---|---|
+| Staleness soundness | No requirement reports `PASSED` while any of its T1 links is `stale` or `unknown` (INV-T2) |
+| Snapshot purity | Rendering the same snapshot with the same template version always yields identical content (INV-B2) |
+| Traversal termination | BOM and requirement-hierarchy traversal terminates on any graph, including cyclic ones (INV-T4) |
 | Convergence | For any sequence of source/target edits, running the engine to quiescence yields a state where mapped fields agree per ownership policy |
 | Idempotency | Processing the same event N times produces the same final state and exactly one target record |
 | No-loop | Given symmetric bidirectional mapping and no external edits, the engine reaches quiescence within K writes |
@@ -39,6 +42,9 @@ behaviour added to the fake, permanently.
 
 - Kill a worker mid-write (after external call, before commit) → expect
   convergence, zero duplicates.
+- Kill during baseline publish between document create and approval submission →
+  resume without creating a duplicate Windchill revision.
+- Xray token expires mid-execution-sync → refresh and resume, no lost results.
 - Duplicate webhook delivery ×5 → one write.
 - Out-of-order events (child before parent) → deferral then success.
 - Target returns 200 but did not persist (simulated) → next reconcile repairs.
@@ -51,21 +57,31 @@ behaviour added to the fake, permanently.
 
 | # | Scenario | Expected |
 |---|---|---|
-| S1 | Create software PR in Windchill | Jira Bug created < 60 s, correct project/type/fields, correlation fields set on both sides |
-| S2 | Edit PR description | Managed block updated; content outside it untouched |
-| S3 | Move Jira issue To Do → In Progress → Done | PR state follows canonical mapping; resolution written back |
-| S4 | Add attachment in Windchill | Appears once in Jira; re-sync does not duplicate |
-| S5 | Same field edited on both sides within a minute (`manual` policy) | No write; `CONFLICT_MANUAL` quarantine with a side-by-side diff |
-| S6 | Windchill object checked out, then updated in Jira | Deferred, retried, succeeds after check-in |
-| S7 | PR set to RELEASED, Jira edit follows | Write refused pre-flight, `TARGET_IMMUTABLE`, no error storm |
-| S8 | Unmapped Severity value | `UNMAPPED_VALUE` quarantine, replay after adding the map entry succeeds |
-| S9 | Windchill user with no Jira account | Fallback assignee + explanatory comment + metric increment |
-| S10 | Bridge stopped 4 h, then restarted | All missed changes propagate, no duplicates, watermark lag recovers |
-| S11 | Bridge DB restored to T−24 h | Links rebuilt via correlation fields; zero duplicate creates |
-| S12 | 500 objects released in one CN | Backlog drains within SLA, Windchill concurrency cap respected |
-| S13 | Filter changed so 50 records leave scope | Records unlinked, nothing deleted, audit events present |
-| S14 | Audit export for a record | Complete chronological history; chain verification passes |
-| S15 | Deliberate audit row tamper (test DB) | `/audit/verify` reports a chain break at the right sequence |
+| S1 | Link requirement Epic to Windchill spec | T1 link created with `assertedAgainstRevision`; visible both sides |
+| S2 | Revise the linked spec B → C | Link goes `stale`; requirement coverage drops from `PASSED` to `STALE`; tests marked `REQUIRES_REVERIFICATION` |
+| S3 | Epic created without `Epic Category` | Quarantined `UNMAPPED_VALUE`; never guessed, never defaulted |
+| S4 | Change Epic (category `Change`) enters Xray coverage | Filtered out of requirement coverage roll-up |
+| S5 | Test Execution completes with all-pass | Coverage → `PASSED` (only if no stale T1); projected into Windchill |
+| S6 | Test Execution completes with a failure | Coverage → `FAILED`; defect link surfaced in trace matrix |
+| S7 | 2,000 Test Runs in one nightly execution | One checkpoint sync at completion; zero per-run writes to Windchill |
+| S8 | Test Execution left permanently open | Age alert fires; completeness gate blocks a baseline containing it |
+| S9 | Baseline published, approved in Windchill | Documents at rev A; membership recorded on every in-scope issue |
+| S10 | Re-publish same scope after edits | Windchill rev B; drift report resets |
+| S11 | Regenerate documents from a stored snapshot | Content-identical to the original publication |
+| S12 | Baseline attempted with a `FAILED` coverage in scope | **Blocked**; publishes only with a recorded, justified override |
+| S13 | Jira issue deleted after being baselined | Snapshot renders unaffected — it holds values, not references |
+| S14 | ECR raised on a part | Change Work Package Epic created; impact set computed < 30 s |
+| S15 | ECN touching 300 parts | Impact runs as a background job; BOM traversal depth-limited and cycle-safe |
+| S16 | BOM containing a cycle via a substitute | Traversal terminates; no stack overflow, no duplicate impact rows |
+| S17 | `NO_IMPACT` classification submitted with no justification | Rejected by the API |
+| S18 | Material change to a baselined requirement with released outputs | Draft ECR prepared; requirement flagged `awaiting_change_control` |
+| S19 | Windchill unreachable during staleness computation | Links report `unknown`, never `current` |
+| S20 | Gate readiness query with one stale link | Not ready; the blocking link is named |
+| S21 | Bridge stopped 4 h, restarted | All missed changes propagate; no duplicates; watermark recovers |
+| S22 | Bridge DB restored to T−24 h | Links rebuilt via correlation fields; zero duplicate creates |
+| S23 | Human edits a `read_only_display` field in Jira | Reverted on next sync with an audit event |
+| S24 | Audit export for one requirement | Complete chronological history; chain verification passes |
+| S25 | Deliberate audit row tamper (test DB) | `/audit/verify` reports the break at the correct sequence |
 
 ## 6. Data for testing
 

@@ -15,11 +15,19 @@ or a documented workaround. Output is evidence, not code.
       attachment download, principals lookup
 - [ ] `fixtures/jira/*.json` — search+changelog, issue, createmeta, transitions,
       field catalogue, user search, attachment upload
+- [ ] `fixtures/xray/*.json` — authenticate, getTests, getTestExecutions,
+      **getTestRuns** (the evidence), coverage query, pagination behaviour
+- [ ] Confirmation that Epic is a coverable issue type and that coverage results
+      can be filtered by `Epic Category`
+- [ ] Windchill document create/revise/attach payloads for the four publication
+      soft types
+- [ ] Windchill where-used (BOM parent) query shape, plus timings at real depth
 - [ ] `findings.md` recording, per operation: works / needs Info*Engine / needs
       customization / blocked — with the exact error observed
 - [ ] Updated status column in `04-integration-contracts.md`
-- [ ] A one-page risk note if lifecycle or create requires customer-installed
-      customization (this changes the delivery model and the roadmap)
+- [ ] A one-page risk note if lifecycle, document create, or where-used requires
+      customer-installed customization (this changes the delivery model and the
+      roadmap)
 
 ## Rules
 - Read-only first. Do all writes in a sandbox container/project.

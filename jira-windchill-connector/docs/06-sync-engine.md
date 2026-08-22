@@ -96,6 +96,53 @@ Max 3 such retries, then quarantine `WRITE_CONTENTION`.
 A circuit breaker per endpoint opens after N consecutive failures, pauses polling
 for that endpoint, and emits an alert; it half-opens on a schedule.
 
+
+## 5a. Volume control and checkpointing (ADR-0011)
+
+Requirements and change objects are low-volume. Test Runs are not — a nightly
+regression can produce thousands. The engine must treat them differently.
+
+| Entity class | Detection | Sync unit |
+|---|---|---|
+| Requirement Epic, ECR, ECN, document, part | Poll on modified timestamp | The entity |
+| Test, Test Set, Test Plan | Poll (Jira issues) | The entity |
+| **Test Execution** | Poll + completion predicate | **The checkpoint** |
+| **Test Run** | Never polled directly | Read via Xray only when its execution checkpoints |
+
+Completion predicate, configurable per flow:
+
+```yaml
+testExecution:
+  completeWhen: all_runs_terminal   # all_runs_terminal | issue_closed | either
+  incompleteAgeAlertHours: 72
+```
+
+Rules:
+- Never query `getTestRuns` across all executions. Query per checkpointed
+  execution, paginated (Xray caps at 100/page).
+- An execution that never completes never checkpoints — hence the age alert, and
+  hence the completeness gate in `14` §5 blocks a baseline containing one.
+- Re-opening a completed execution produces a new checkpoint; the roll-up is
+  recomputed and the coverage status may move backwards. That is correct
+  behaviour, and the audit trail records both.
+
+## 5b. Derived-state recomputation
+
+Staleness (`13` §3), coverage roll-up (`13` §4) and impact caches (`15` §5) are
+**derived**, not synced. They are recomputed when:
+
+| Trigger | Recompute |
+|---|---|
+| Windchill object revision changes | Staleness for every T1 link targeting it, then coverage for affected requirements |
+| Test Execution checkpoints | Coverage for every requirement its tests cover |
+| T1 link created/superseded | Staleness + coverage for that requirement |
+| BOM structure changes | Invalidate `where_used_cache` for the affected subtree |
+| Nightly reconciliation | Everything in scope, as a correctness backstop |
+
+Recomputation is idempotent and cheap enough to re-run freely. When in doubt,
+recompute — a stale derived value is a silent correctness failure, and INV-T2
+depends on these being current.
+
 ## 6. Reconciliation sweep
 
 Polling on modification timestamps cannot see: deletions, permission changes,
