@@ -1,0 +1,23 @@
+{
+  "id": 918237,
+  "partitionKey": "pr-to-bug",
+  "seq": 40122,
+  "occurredAt": "2026-08-22T09:13:06.442Z",
+  "actor": {
+    "kind": "service",
+    "id": "bridge-svc",
+    "displayName": "Windchill Bridge",
+    "onBehalfOf": { "username": "rnair", "displayName": "R. Nair", "system": "windchill" }
+  },
+  "action": "WRITE_APPLIED",
+  "flowId": "pr-to-bug",
+  "linkId": "0f2c7a1e-8b31-4a09-9f0c-2b6d0d8b7a11",
+  "side": "b",
+  "before": { "priority": "Medium", "duedate": null },
+  "after":  { "priority": "High",   "duedate": "2026-09-15" },
+  "reason": "source change PR000123 rev A modified 2026-08-22T09:12:44Z",
+  "configVersion": 17,
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "prevHash": "sha256:11ab...90ff",
+  "hash": "sha256:c3d9...41b7"
+}

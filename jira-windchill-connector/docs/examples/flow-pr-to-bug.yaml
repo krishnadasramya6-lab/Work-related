@@ -1,0 +1,125 @@
+# Reference flow: Windchill Problem Report → Jira Bug (UC-1)
+# Validated against docs/05-mapping-spec.md. This is the canonical example —
+# keep it in sync with the schema.
+schemaVersion: 1
+
+endpoints:
+  windchill-prod:
+    systemType: windchill
+    baseUrl: https://plm.acme.local/Windchill
+    authRef: secret://windchill/prod
+    concurrencyCap: 4
+    strategy:                       # per-operation API strategy (see 04 Part B)
+      read: restFirst
+      create: restFirst
+      lifecycle: ieFallback
+  jira-cloud:
+    systemType: jira
+    baseUrl: https://acme.atlassian.net
+    authRef: secret://jira/prod
+    apiVersion: "3"
+
+flows:
+  - id: pr-to-bug
+    source: windchill-prod
+    target: jira-cloud
+    entityKinds: [problem_report]
+
+    schedule:
+      pollIntervalSec: 60
+      safetyMarginSec: 120
+      reconcile: "0 2 * * *"        # nightly, off-hours
+
+    filter:
+      source:
+        kinds: [problem_report]
+        predicate: >
+          softType in ['com.acme.SoftwareProblemReport']
+          and context.containerKey in ['ALPHA','BETA']
+          and fields.Discipline == 'Software'
+        excludeStates: [CANCELLED]
+      onLeaveScope: unlink_out_of_scope
+
+    routing:                        # container → project
+      containerKey:
+        ALPHA: { project: SWQA, issueType: Bug }
+        BETA:  { project: SWQA, issueType: Bug }
+      onUnrouted: quarantine
+
+    mapping:
+      fields:
+        - { source: Number,       target: "cf:Windchill ID",   direction: initial_only }
+        - { source: __oid,        target: "cf:Windchill OID",  direction: initial_only }   # correlation key
+        - { source: Name,         target: summary,             direction: source_to_target,
+            transform: { truncate: 255, prefix: "[{{Number}}] " } }
+        - { source: Description,  target: description,         direction: source_to_target,
+            managedBlock: true }
+        - { source: Severity,     target: priority,            direction: source_to_target,
+            valueMap: severity_to_priority }
+        - { source: NeedDate,     target: duedate,             direction: bidirectional,
+            ownership: source_wins }
+        - { source: Originator,   target: reporter,            direction: initial_only,
+            resolve: party }
+        - { source: Assignee,     target: assignee,            direction: bidirectional,
+            ownership: target_wins, resolve: party }
+        - { source: AffectedParts, target: "cf:Affected Parts", direction: source_to_target,
+            transform: { join: ", ", template: "{{number}} rev {{revision}}" } }
+        - { source: Resolution,   target: resolution,          direction: target_to_source,
+            valueMap: jira_resolution_to_wc }
+        - { source: SoftwareBuild, target: fixVersions,        direction: target_to_source,
+            transform: { join: ", " } }
+
+      valueMaps:
+        severity_to_priority:
+          map: { Critical: Highest, High: High, Medium: Medium, Low: Low }
+          onUnmapped: quarantine
+        jira_resolution_to_wc:
+          map: { Done: Resolved, "Won't Do": "Not a Problem", Duplicate: Duplicate }
+          onUnmapped: quarantine
+
+      states:
+        canonicalSet: change_workflow_v1
+        source:
+          INWORK: IN_WORK
+          UNDERREVIEW: IN_REVIEW
+          APPROVED: APPROVED_FOR_WORK
+          RESOLVED: VERIFIED
+          CLOSED: CLOSED
+          CANCELLED: CANCELLED
+        target:
+          "To Do": NEW
+          "In Progress": IN_WORK
+          "In Review": IN_REVIEW
+          "Done": CLOSED
+          "Won't Do": CANCELLED
+        transitionPolicy:
+          strategy: shortest_path
+          onUnreachable: quarantine
+          allowReopen: false
+          requiredFieldsOnTransition:
+            Done: { resolution: Done }
+
+      people:
+        strategy: [alias_table, email, username]
+        fallbackAssignee: "sw-triage@acme.com"
+        onUnresolved: fallback_and_comment
+
+      attachments:
+        direction: source_to_target
+        maxAttachmentBytes: 26214400        # 25 MB
+        allowExtensions: [pdf, png, jpg, jpeg, txt, log, csv, xlsx, docx]
+        linkOnlyExtensions: [prt, asm, drw, sldprt, step, stp]
+        onOversize: link_only
+
+      comments:
+        enabled: false                       # off by default (05 §9)
+
+      relations:
+        mode: remote_link
+        createHierarchy: false
+
+      hooks: {}                              # none — prefer config over code
+
+    limits:
+      loopBreaker: { writes: 6, windowSec: 300, action: pause_link }
+      maxRetries: 6
