@@ -101,8 +101,10 @@ Each Windchill ECR gets a Jira Epic; progress and completion roll back up.
 **UC-6 — Gate readiness.**
 Computed for a phase gate or ECN release; enforced by Windchill.
 
-**UC-7 — Requirement change → change control (Jira → Windchill).**
-A material change to a baselined requirement prepares a draft ECR.
+**UC-7 — Requirement-level Change Request → Windchill (Jira → Windchill, ADR-0012).**
+An engineer raises a Jira `requirement_cr` (Logical View); above the release/
+baseline threshold, the Bridge links it to a Windchill ECR (Physical View) and
+carries Change Control Notifications both ways as it progresses.
 
 **UC-8 — Context projection.**
 Part/BOM/spec context read-only in Jira; coverage read-only in Windchill.

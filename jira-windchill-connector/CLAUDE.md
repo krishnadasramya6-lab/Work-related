@@ -25,7 +25,7 @@ boundary at least four times.
 **This is not a convenience integration. It is the design control system.**
 If it fails, the company does not have a slow process; it has an unprovable one.
 
-## 2. The four settled decisions
+## 2. The five settled decisions
 
 These are decided. Do not relitigate them in code review; open an ADR if you
 believe one is wrong.
@@ -36,6 +36,14 @@ believe one is wrong.
 | 2 | **Xray only** for test management. No Zephyr, no native-issue-type V&V. | ADR-0009 |
 | 3 | **Requirements are Jira Epics.** Each Windchill ECR also gets its own Epic as a change work package, discriminated by a required field. | ADR-0010 |
 | 4 | **Checkpoint-based result sync.** Test *Executions* at completion, never individual Test Runs. | ADR-0011 |
+| 5 | **Jira also has its own requirement-level Change Request** (Logical View), distinct from both Epic kinds above. Windchill's ECR/ECN stays the sole *formally controlled* change record. | ADR-0012 |
+
+This pack aligns to *PTC Windchill and Atlassian JIRA Integration — An Approach
+Note, Rev 1.0 (26-JAN-2026)*, confirmed authoritative. See
+`docs/16-terminology-crosswalk.md` for the full reconciliation — it maps the
+deck's Physical View / Logical View language and its three named integration
+modules onto this pack's structure, and lists what's still open (Risk
+Management, GitHub/CI DevOps) rather than in scope.
 
 ## 3. Why Posture A shapes everything
 
@@ -95,6 +103,7 @@ Ordered by centrality, not by number.
 | **The trace chain and staleness rules** (start here) | `docs/13-traceability-model.md` |
 | **Baseline snapshots → controlled Windchill documents** | `docs/14-baseline-and-publish.md` |
 | **Change impact analysis, re-verification scope** | `docs/15-change-impact.md` |
+| **How this maps to the approach note / IRILLIC's 3 modules** | `docs/16-terminology-crosswalk.md` |
 | Objectives, personas, success measures | `docs/00-product-brief.md` |
 | Vocabulary (Windchill, Xray, regulatory) | `docs/01-glossary.md` |
 | Canonical entities, identity, invariants | `docs/02-domain-model.md` |

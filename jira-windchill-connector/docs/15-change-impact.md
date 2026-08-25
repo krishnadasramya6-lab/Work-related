@@ -47,29 +47,47 @@ Impact of ECR-00412 (Part PN-1234 rev B → C)
   Estimated re-verification scope: 23 tests / 4 test plans
 ```
 
-## 3. Direction B — Jira requirement change → Windchill
+## 3. Direction B — Jira requirement-level Change Request → Windchill (ADR-0012)
 
-Trigger: a requirement Epic changes materially *after* it has been included in an
-approved baseline **and** its linked design outputs are at a released revision.
+**Superseded design note:** the original version of this section had the Bridge
+silently *draft* a Windchill ECR whenever a baselined requirement changed. That
+assumed Jira had no change-record entity of its own. It now does — a native
+Jira issue type **"Change Request"** (`requirement_cr`), distinct from the
+requirement Epic and from the Change Work Package Epic (ADR-0010). This is the
+**Logical View** named in the approach note; Windchill's ECR/ECN is the
+**Physical View** and remains the sole *formally controlled* change record.
 
-That combination means the change cannot be absorbed silently — it requires
-formal change control.
+**Trigger:** an engineer raises a `requirement_cr` in Jira, linked to the
+requirement Epic(s) it concerns — not something the Bridge infers from a field
+edit. A requirement text change alone does not raise one; a human decides a
+change request is warranted.
 
 ```
- (1) DETECT   material field change on a baselined requirement
-              (text, acceptance criteria, verification method — NOT labels,
-               assignee, comments; the material field list is config)
- (2) ASSESS   are linked outputs RELEASED? is the requirement in an approved
-              baseline? → if both, change control is required
- (3) RAISE    create a draft Windchill ECR pre-populated with the requirement,
-              the before/after diff, and the affected outputs
- (4) LINK     T3 link back to a Change Work Package Epic
- (5) FLAG     mark the requirement `awaiting_change_control` in Jira until the
-              ECR reaches a decided state
+ (1) RECEIVE   engineer raises requirement_cr in Jira, linked to requirement(s)
+ (2) ASSESS    are the linked design outputs RELEASED, and is the requirement
+               in an approved baseline?  (same threshold as before)
+ (3a) BELOW THRESHOLD   requirement_cr stays Jira-only; resolved inside Jira.
+                        No Windchill record created.
+ (3b) AT THRESHOLD      formal change control required →
+      RAISE    create a Windchill ECR, pre-populated with the requirement CR,
+               the before/after diff, and the affected outputs
+      LINK     T6 `raises_change`: requirement_cr → ECR  (docs/13 §2)
+      NOTIFY   Change Control Notification both ways as the ECR progresses
+               (this is the module the approach note names)
+ (4) TRACK     requirement_cr status mirrors the ECR's decision states until
+               the ECR reaches a terminal state; then requirement_cr closes
 ```
 
-The draft ECR is **a draft**. A human completes the analysis and submits it.
-The Bridge does not raise formal change records autonomously — it prepares them.
+The threshold logic is unchanged from the original design: only work that is
+**released and baselined** triggers formal change control, so requirements still
+in flux don't generate change-control overhead they don't need. What changed is
+*who creates the Jira record* — the engineer, not the Bridge — and its status:
+a real Jira record from the moment it's raised, not a Bridge-authored draft.
+
+If the ECR later spawns engineering work, that becomes a **Change Work Package
+Epic** (T3, ADR-0010) — a different Jira entity from the `requirement_cr` that
+triggered it. The two are linked, never merged; the trace matrix must keep them
+distinct or the picture becomes unreadable.
 
 ## 4. Impact classification
 

@@ -85,6 +85,7 @@ type Party = {
 |---|---|---|---|
 | `requirement` | Issue type `Epic`, `Epic Category = Requirement` | Jira | Source of trace; coverage written back |
 | `change_work_package` | Issue type `Epic`, `Epic Category = Change` | Jira | Created from ECR (T3); progress rolls up |
+| `requirement_cr` | Issue type **`Change Request`** (not Epic) | Jira | Engineer-raised, real record (ADR-0012); links to Windchill ECR (T6) above threshold |
 | `test` | Issue type `Test` | Xray/Jira | Verification definition (T2) |
 | `test_set` / `test_plan` | Issue types | Xray/Jira | Grouping; scope for executions |
 | `test_execution` | Issue type `Test Execution` | Xray/Jira | **The sync checkpoint** (ADR-0011) |
@@ -99,6 +100,21 @@ type Party = {
 
 Anything not in this matrix is **rejected at config validation time**, not at
 runtime.
+
+### Three "change"-flavoured Jira entities — do not conflate them
+
+ADR-0012 adds a third entity carrying the word "change". Keep them straight:
+
+| Entity | Issue type | Who creates it | Role |
+|---|---|---|---|
+| Requirement | Epic, category `Requirement` | Engineer | Design input |
+| Change Work Package | Epic, category `Change` | Bridge, from a Windchill ECR (T3) | Tracks engineering work an ECN spawns |
+| Requirement CR | `Change Request` | Engineer | Logical-view change request; may trigger a Windchill ECR (T6) |
+
+A Change Work Package and a Requirement CR can both exist for the same ECR —
+one is the record that *triggered* formal change control, the other is the
+Epic tracking the *engineering work* the resulting ECN spawns. Linked, never
+merged.
 
 ### The Epic discriminator
 

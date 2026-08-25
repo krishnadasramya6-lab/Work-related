@@ -90,6 +90,26 @@ Written onto the linked WTDocument/WTPart as IBAs:
 `JIRA_COVERAGE_AT` matters: a Windchill reviewer must be able to tell whether
 they are reading a fresh projection or a stale one.
 
+
+### 3d. Jira Requirement CR ↔ Windchill ECR (UC-7, T6, ADR-0012)
+
+Origin is Jira, but the entity only reaches Windchill above the threshold in
+`15` §3. Below threshold, no mapping runs at all — the record stays Jira-only.
+
+| Jira (source) | Windchill (target, created above threshold) | Direction | Notes |
+|---|---|---|---|
+| `key` | `cf:JIRA_KEY` (IBA) | initial_only | Correlation key |
+| `summary` | `Name` | initial_only | |
+| `description` + linked requirement diff | `Description` | initial_only | Rendered, not managed-block (Windchill owns it from here) |
+| Linked requirement(s) | ECR's affected-object references | initial_only | Via T1 chain |
+| — | `LifecycleState` | target_to_source | Written back to `requirement_cr` status |
+| — | ECN decision (approved/rejected) | target_to_source | Closes or reopens the `requirement_cr` |
+
+Once created, the ECR is the record of substance; the Jira `requirement_cr`
+becomes a status mirror, not an independently editable record. This mirrors the
+Posture A logic applied everywhere else (ADR-0008): Jira originates, Windchill
+controls.
+
 ## 4. Value maps (enums)
 
 Value maps are explicit tables with a declared behaviour for unmapped values:

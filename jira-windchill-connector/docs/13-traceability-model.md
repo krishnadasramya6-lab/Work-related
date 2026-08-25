@@ -23,8 +23,13 @@ The central document. Everything else serves this.
       │
       │ affected_by
       ▼
-  CHANGE                        Windchill ECR ──► ECN
-      │ implemented_by                │
+  REQUIREMENT CR                Jira issue type "Change Request"  (Logical View,
+  (requirement-level,                ADR-0012) — engineer-raised, real Jira record
+   engineer-raised)                  │
+      │ raises_change (T6, if formal control required)
+      ▼
+  CHANGE                        Windchill ECR ──► ECN   (Physical View — the
+      │ implemented_by                │             sole formally controlled record)
       ▼                               ▼
   CHANGE WORK PACKAGE           Jira Epic  [Epic Category = Change]
       │
@@ -50,6 +55,7 @@ These are the only link types the Bridge maintains. Each is a row in `trace_link
 | **T3** | `implemented_by` | Windchill ECR | Jira Epic (Change) | Bridge, on ECR creation |
 | **T4** | `impacts` | Windchill Part/Doc revision | Jira Requirement / Test | Bridge, **derived** (see `15`) |
 | **T5** | `published_as` | Bridge baseline snapshot | Windchill WTDocument revision | Bridge, on publication |
+| **T6** | `raises_change` | Jira `requirement_cr` (Logical View) | Windchill ECR (Physical View) | Bridge, created when the threshold in `15` §3 is met (ADR-0012) |
 
 T2 is intra-Jira and Xray computes it natively — we **consume** Xray's coverage
 rather than reinventing it. But it must be *projected into Windchill*, because
@@ -57,6 +63,11 @@ the Windchill-side reviewer cannot see Jira.
 
 T4 is derived, not asserted. It is recomputed on every change; it is never a
 stored user intent. Treat a stored T4 row as a cache with an invalidation rule.
+
+T6 links a **real, human-raised** Jira record to a Windchill ECR — not every
+`requirement_cr` gets one (`15` §3 threshold). Windchill's ECR/ECN stays the
+sole *formally controlled* change record; the Jira Change Request is a real
+record but not a controlled one, same as requirements and V&V (ADR-0008).
 
 ## 3. Revision-awareness — the core mechanism
 

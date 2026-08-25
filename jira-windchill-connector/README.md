@@ -28,7 +28,7 @@ The tool boundary runs through the middle of the design control V-model. The
 trace chain ISO 13485 §7.3 and 21 CFR 820.30 require crosses it at least four
 times. This is not a convenience integration — it is the design control system.
 
-## The four settled decisions
+## The five settled decisions
 
 | # | Decision | ADR |
 |---|---|---|
@@ -36,6 +36,12 @@ times. This is not a convenience integration — it is the design control system
 | 2 | **Xray only** for test management | ADR-0009 |
 | 3 | **Requirements are Epics**, discriminated from change work packages by a required field | ADR-0010 |
 | 4 | **Checkpoint-based result sync** — Test Executions, never individual Test Runs | ADR-0011 |
+| 5 | **Jira also has its own requirement-level Change Request** (Logical View), distinct from both Epic kinds. Windchill's ECR/ECN stays the sole formally controlled change record | ADR-0012 |
+
+Aligned to *PTC Windchill and Atlassian JIRA Integration — An Approach Note,
+Rev 1.0 (26-JAN-2026)*. See `docs/16-terminology-crosswalk.md` for the full
+reconciliation against the deck's Physical/Logical View framing and its three
+named integration modules.
 
 ## Contents
 
@@ -58,7 +64,8 @@ times. This is not a convenience integration — it is the design control system
 | **`docs/13-traceability-model.md`** | **The trace chain, T1–T5 links, staleness, coverage roll-up** |
 | **`docs/14-baseline-and-publish.md`** | **Snapshot → controlled Windchill documents (Posture A engine)** |
 | **`docs/15-change-impact.md`** | **Automated re-verification scoping** |
-| `docs/adr/` | Eleven accepted decision records |
+| **`docs/16-terminology-crosswalk.md`** | **Reconciliation against the approach note (deck) and IRILLIC's 3 modules** |
+| `docs/adr/` | Twelve accepted decision records |
 | `docs/examples/` | Reference flow YAMLs, trace link, baseline snapshot, audit event |
 | `context-packs/` | Eight scoped briefs for handing work to an agent or engineer |
 

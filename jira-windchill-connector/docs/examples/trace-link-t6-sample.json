@@ -1,0 +1,20 @@
+{
+  "id": "e7c4a210-9f33-4b1a-8e02-51d0a3c9f766",
+  "flowId": "requirement-cr-to-ecr",
+  "type": "raises_change",
+  "jiraKey": "CR-58",
+  "jiraIssueId": "11207",
+  "jiraIssueType": "Change Request",
+  "windchillOid": "OR:wt.change2.WTChangeRequest2:91004",
+  "windchillNumber": "ECR-00412",
+  "assertedAt": "2026-08-24T11:02:00Z",
+  "assertedBy": { "kind": "service", "displayName": "Windchill Bridge" },
+  "threshold": {
+    "linkedRequirement": "REQ-142",
+    "linkedOutputRevisionAtRaise": "SPEC-0031 rev C",
+    "outputLifecycleState": "RELEASED",
+    "requirementInApprovedBaseline": "BL-ALPHA-2026-08-22-001",
+    "decision": "formal_change_control_required"
+  },
+  "note": "CR-58 raised by M. Iyer against REQ-142; SPEC-0031 was RELEASED and REQ-142 was in an approved baseline, so the Bridge created ECR-00412 per ADR-0012 §threshold and will mirror its decision states back onto CR-58."
+}
