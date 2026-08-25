@@ -1,0 +1,110 @@
+# Reference flow: Windchill ECR → Jira Change Work Package Epic (UC-5, trace link T3)
+# See docs/05-mapping-spec.md §3a.
+schemaVersion: 2
+
+endpoints:
+  windchill-prod:
+    systemType: windchill
+    baseUrl: https://plm.acme.local/Windchill
+    authRef: secret://windchill/prod
+    concurrencyCap: 4
+    strategy: { read: restFirst, create: restFirst, lifecycle: ieFallback }
+  jira-cloud:
+    systemType: jira
+    baseUrl: https://acme.atlassian.net
+    authRef: secret://jira/prod
+    apiVersion: "3"
+  xray-cloud:
+    systemType: xray
+    baseUrl: https://xray.cloud.getxray.app
+    authRef: secret://xray/prod          # separate credential pair from Jira
+
+# Epic carries two meanings (ADR-0010). Every predicate keys on this.
+discriminator:
+  field: "Epic Category"                 # resolved to customfield_NNNNN at activation
+  requirement: "Requirement"
+  changeWorkPackage: "Change"
+  onMissing: quarantine                  # never guess
+
+flows:
+  - id: ecr-to-change-epic
+    source: windchill-prod
+    target: jira-cloud
+    entityKinds: [change_request]
+    schedule: { pollIntervalSec: 60, safetyMarginSec: 120, reconcile: "0 2 * * *" }
+
+    filter:
+      source:
+        kinds: [change_request]
+        predicate: >
+          context.containerKey in ['ALPHA','BETA']
+          and fields.Discipline in ['Software','Systems']
+        excludeStates: [CANCELLED]
+      onLeaveScope: unlink_out_of_scope
+
+    routing:
+      containerKey:
+        ALPHA: { project: ENG, issueType: Epic }
+        BETA:  { project: ENG, issueType: Epic }
+      onUnrouted: quarantine
+
+    mapping:
+      fields:
+        - { source: Number,      target: "cf:Windchill ID",  direction: initial_only }
+        - { source: __oid,       target: "cf:Windchill OID", direction: initial_only }
+        - { const: "Change",     target: "Epic Category",    direction: initial_only }
+        - { source: Name,        target: summary,            direction: source_to_target,
+            transform: { truncate: 255, prefix: "[{{Number}}] " } }
+        - { source: Description, target: description,        direction: source_to_target,
+            managedBlock: true }
+        - { source: ReasonForChange, target: "cf:Change Reason", direction: source_to_target }
+        - { source: NeedDate,    target: duedate,            direction: bidirectional,
+            ownership: source_wins }
+        - { source: Requester,   target: reporter,           direction: initial_only, resolve: party }
+        - { source: Assignee,    target: assignee,           direction: bidirectional,
+            ownership: target_wins, resolve: party }
+        - { source: LifecycleState, target: status,          direction: source_to_target }
+        - { computed: childCompletionPercent, target: "cf:Work Complete %",
+            direction: target_to_source }
+        - { computed: impactAnalysisBlock, target: description,
+            direction: source_to_target, managedBlock: impact }
+
+      states:
+        canonicalSet: change_workflow_v1
+        source:
+          INWORK: IN_WORK
+          UNDERREVIEW: IN_REVIEW
+          APPROVED: APPROVED_FOR_WORK
+          RESOLVED: VERIFIED
+          CLOSED: CLOSED
+          CANCELLED: CANCELLED
+        target:
+          "To Do": NEW
+          "In Progress": IN_WORK
+          "In Review": IN_REVIEW
+          "Done": CLOSED
+          "Won't Do": CANCELLED
+        transitionPolicy:
+          strategy: shortest_path
+          onUnreachable: quarantine
+          allowReopen: false
+          requiredFieldsOnTransition: { Done: { resolution: Done } }
+
+      people:
+        strategy: [alias_table, email, username]
+        fallbackAssignee: "eng-triage@acme.com"
+        onUnresolved: fallback_and_comment
+
+      attachments:
+        direction: source_to_target
+        maxAttachmentBytes: 26214400
+        allowExtensions: [pdf, png, jpg, txt, csv, xlsx, docx]
+        linkOnlyExtensions: [prt, asm, drw, sldprt, step, stp]
+        onOversize: link_only
+
+      comments: { enabled: false }
+      relations: { mode: remote_link, createHierarchy: false }
+
+    limits:
+      loopBreaker: { writes: 6, windowSec: 300, action: pause_link }
+      maxRetries: 6

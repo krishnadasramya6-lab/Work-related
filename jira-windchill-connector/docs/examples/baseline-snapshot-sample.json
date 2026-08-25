@@ -1,0 +1,41 @@
+{
+  "id": "BL-ALPHA-2026-08-22-001",
+  "label": "Design Review 2 — Alpha Pump",
+  "scope": {
+    "jql": "project = REQ AND 'Epic Category' = Requirement AND labels = product-alpha",
+    "resolvedKeys": ["REQ-101", "REQ-142", "REQ-143", "REQ-201"],
+    "productContainer": "OR:wt.pdmlink.PDMLinkProduct:1201"
+  },
+  "createdAt": "2026-08-22T09:00:00Z",
+  "createdBy": { "username": "rkrishnadas", "displayName": "R. Krishnadas", "resolved": true },
+  "configVersion": 21,
+  "templateVersion": "srs-v1.3",
+  "contentHash": "sha256:2f8e1a...77bc",
+  "status": "approved",
+  "overrides": [
+    {
+      "check": "requirement_without_test",
+      "requirementKey": "REQ-201",
+      "justification": "Verified by inspection under protocol VP-0009; no automated test applicable.",
+      "by": "rkrishnadas",
+      "at": "2026-08-22T09:04:11Z"
+    }
+  ],
+  "entitiesSummary": {
+    "requirements": 4,
+    "tests": 11,
+    "testExecutions": 3,
+    "traceLinks": { "satisfied_by": 6, "verified_by": 11 }
+  },
+  "coverageAtFreeze": { "PASSED": 3, "STALE": 0, "FAILED": 0, "NOT_COVERED": 1 },
+  "publication": {
+    "SRS":          { "documentNumber": "SRS-0014", "revision": "B", "approvedAt": "2026-08-23T14:22:00Z" },
+    "VV_PLAN":      { "documentNumber": "VVP-0014", "revision": "B", "approvedAt": "2026-08-23T14:22:00Z" },
+    "VV_REPORT":    { "documentNumber": "VVR-0014", "revision": "A", "approvedAt": "2026-08-23T14:25:00Z" },
+    "TRACE_MATRIX": { "documentNumber": "TM-0014",  "revision": "B", "approvedAt": "2026-08-23T14:25:00Z" },
+    "approvers": [
+      { "displayName": "M. Iyer", "role": "Design Lead" },
+      { "displayName": "S. Bose", "role": "QA Manager" }
+    ]
+  }
+}

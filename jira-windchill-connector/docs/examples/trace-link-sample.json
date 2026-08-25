@@ -1,0 +1,20 @@
+{
+  "id": "b31f7a90-2c14-4e88-9a01-7d5c2e8f0043",
+  "flowId": "requirement-trace",
+  "type": "satisfied_by",
+  "jiraKey": "REQ-142",
+  "jiraIssueId": "10442",
+  "windchillOid": "OR:wt.doc.WTDocument:88213",
+  "windchillNumber": "SPEC-0031",
+  "assertedAgainstRevision": "B",
+  "assertedAt": "2026-07-14T10:22:00Z",
+  "assertedBy": { "username": "mviswanath", "displayName": "M. Viswanath", "resolved": true },
+  "currentRevision": "C",
+  "staleness": "stale",
+  "derived": false,
+  "consequence": {
+    "requirementCoverageStatus": "STALE",
+    "testsMarked": ["TEST-88", "TEST-91"],
+    "note": "Tests last passed 2026-07-20 against SPEC-0031 rev B; spec is now rev C."
+  }
+}
